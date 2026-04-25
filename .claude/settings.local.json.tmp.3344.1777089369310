@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter --version)",
+      "Bash(/opt/flutter/bin/flutter --version)",
+      "Skill(update-config)",
+      "Bash(/opt/flutter/bin/flutter create *)",
+      "Bash(/opt/flutter/bin/flutter pub *)",
+      "Bash(mv ecua_inventario/.* .)",
+      "Bash(mv ecua_inventario/* .)",
+      "Bash(rmdir ecua_inventario)",
+      "Bash(/opt/flutter/bin/flutter analyze *)",
+      "Bash(/opt/flutter/bin/flutter devices *)",
+      "Bash(adb devices *)",
+      "Bash(/home/mickaell/Android/Sdk/platform-tools/adb devices *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git -C \"/home/mickaell/Desktop/Proyectos de MICKAELL/EcuaInventario/Frontend\" rm --cached .claude/settings.local.json)",
+      "Bash(getent passwd *)",
+      "Bash(echo \"---shell: $\\(getent passwd mickaell)",
+      "Bash(sudo -u mickaell /opt/flutter/bin/flutter --version)"
+    ]
+  }
+}

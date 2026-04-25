@@ -1,0 +1,44 @@
+name: ecua_inventario
+description: "Plataforma SaaS gastronómica para pequeños negocios de comida en Ecuador."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Estado
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navegación
+  go_router: ^14.8.1
+
+  # Tipografía
+  google_fonts: ^6.2.1
+
+  # HTTP
+  dio: ^5.8.0+1
+
+  # Almacenamiento local
+  shared_preferences: ^2.3.5
+  flutter_secure_storage: ^9.2.4
+
+  # Internacionalización
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.1
+  custom_lint: ^0.7.5
+  riverpod_lint: ^2.6.1
+
+flutter:
+  uses-material-design: true

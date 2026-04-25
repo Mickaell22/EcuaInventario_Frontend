@@ -1,0 +1,17 @@
+{
+  "env": {
+    "ANDROID_HOME": "/home/mickaell/Android/Sdk",
+    "PATH": "/home/mickaell/Android/Sdk/platform-tools:/opt/flutter/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(/opt/flutter/bin/flutter *)",
+      "Bash(/opt/flutter/bin/dart *)",
+      "Bash(sudo -u mickaell /opt/flutter/bin/flutter *)",
+      "Bash(sudo -u mickaell /opt/flutter/bin/dart *)",
+      "Bash(/home/mickaell/Android/Sdk/platform-tools/adb *)",
+      "Bash(git *)",
+      "Bash(chown -R mickaell:mickaell \"/home/mickaell/Desktop/Proyectos de MICKAELL/EcuaInventario/Frontend/.git\")"
+    ]
+  }
+}
