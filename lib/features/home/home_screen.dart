@@ -3,60 +3,63 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-enum _Semaforo { verde, amarillo, rojo }
+enum _Status { ok, warn, bad }
+
+class _Indicator {
+  const _Indicator(this.label, this.value, this.sub, this.status);
+  final String label;
+  final String value;
+  final String sub;
+  final _Status status;
+
+  Color get dotColor => switch (status) {
+        _Status.ok => const Color(0xFF22C55E),
+        _Status.warn => const Color(0xFFF59E0B),
+        _Status.bad => const Color(0xFFEF4444),
+      };
+}
+
+const _kIndicators = [
+  _Indicator('Utilidad del mes', '\$0.00', 'Ing \$0 · Gas \$0', _Status.warn),
+  _Indicator('Stock crítico', '0 insumos', 'Todo en orden', _Status.ok),
+  _Indicator('Margen promedio', '0 %', 'Sin recetas', _Status.bad),
+  _Indicator('Recetas activas', '0', 'Agrega tu primer plato', _Status.bad),
+];
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final fecha = DateFormat("EEEE, d 'de' MMMM", 'es').format(now);
-
-    const indicadores = [
-      (label: 'Utilidad del mes', valor: '\$0.00', sub: 'Ing \$0 · Gas \$0', estado: _Semaforo.amarillo),
-      (label: 'Stock crítico', valor: '0 insumos', sub: 'Todo en orden', estado: _Semaforo.verde),
-      (label: 'Margen promedio', valor: '0%', sub: 'Sin recetas aún', estado: _Semaforo.rojo),
-      (label: 'Recetas activas', valor: '0', sub: 'Agrega tu primer plato', estado: _Semaforo.rojo),
-    ];
-
+    final fecha = DateFormat("EEEE, d 'de' MMMM", 'es').format(DateTime.now());
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: _Header(fecha: fecha),
-          ),
-          SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ResumenCard(),
-                    const SizedBox(height: 16),
-                    const _SectionLabel('Indicadores'),
-                    const SizedBox(height: 8),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1.4,
-                      children: indicadores
-                          .map((ind) => _IndicadorCard(label: ind.label, valor: ind.valor, sub: ind.sub, estado: ind.estado))
-                          .toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    const _SectionLabel('Últimos movimientos'),
-                    const SizedBox(height: 8),
-                    _MovimientosCard(),
-                    const SizedBox(height: 100),
-                  ],
-                ),
-              ),
+      appBar: AppBar(
+        backgroundColor: kBrandNavy,
+        foregroundColor: Colors.white,
+        toolbarHeight: 72,
+        titleSpacing: 20,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('EcuaInventario',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text(fecha,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: Colors.white54)),
+          ],
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              backgroundColor: kBrandAmber.withValues(alpha: 0.2),
+              child: const Icon(Icons.person_outline, color: kBrandAmber, size: 20),
             ),
           ),
         ],
@@ -65,52 +68,46 @@ class HomeScreen extends StatelessWidget {
         onPressed: () => context.go('/chat'),
         backgroundColor: kBrandAmber,
         foregroundColor: kBrandNavy,
+        tooltip: 'Asistente IA',
         child: const Icon(Icons.auto_awesome),
       ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.fecha});
-  final String fecha;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: kBrandNavy,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 16,
-        left: 20,
-        right: 20,
-        bottom: 28,
-      ),
-      child: Row(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Panel de salud',
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(color: kBrandAmber, letterSpacing: 1.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text('EcuaInventario',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(fecha,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
-              ],
-            ),
+          const _SummaryCard(),
+          const SizedBox(height: 16),
+          const _SectionLabel('Indicadores'),
+          const SizedBox(height: 8),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.45,
+            children: [
+              for (final ind in _kIndicators) _IndicatorCard(indicator: ind),
+            ],
           ),
-          CircleAvatar(
-            backgroundColor: kBrandAmber.withValues(alpha: 0.15),
-            child: const Icon(Icons.person_outline, color: kBrandAmber),
+          const SizedBox(height: 16),
+          const _SectionLabel('Últimos movimientos'),
+          const SizedBox(height: 8),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.receipt_long_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 36),
+                    const SizedBox(height: 8),
+                    Text('Sin movimientos aún', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -118,9 +115,17 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _ResumenCard extends StatelessWidget {
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard();
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final items = [
+      ('Ingresos', '\$0.00', const Color(0xFF22C55E)),
+      ('Gastos', '\$0.00', const Color(0xFFEF4444)),
+      ('Utilidad', '\$0.00', cs.primary),
+    ];
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -128,46 +133,31 @@ class _ResumenCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Row(
           children: [
-            const _ResumenItem(label: 'Ingresos', valor: '\$0.00', color: Color(0xFF22C55E)),
-            _Divider(),
-            const _ResumenItem(label: 'Gastos', valor: '\$0.00', color: Color(0xFFEF4444)),
-            _Divider(),
-            const _ResumenItem(label: 'Utilidad', valor: '\$0.00', color: kBrandNavy),
+            for (int i = 0; i < items.length; i++) ...[
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(items[i].$1,
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: cs.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    Text(items[i].$2,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: items[i].$3,
+                              fontWeight: FontWeight.bold,
+                            )),
+                  ],
+                ),
+              ),
+              if (i < items.length - 1)
+                Container(height: 32, width: 1, color: cs.outlineVariant),
+            ],
           ],
         ),
       ),
     );
-  }
-}
-
-class _ResumenItem extends StatelessWidget {
-  const _ResumenItem({required this.label, required this.valor, required this.color});
-  final String label;
-  final String valor;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(valor,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: color, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(height: 32, width: 1, color: Colors.grey.shade200);
   }
 }
 
@@ -177,31 +167,24 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text.toUpperCase(),
-        style: Theme.of(context)
-            .textTheme
-            .labelSmall
-            ?.copyWith(color: Colors.grey, letterSpacing: 1.2, fontWeight: FontWeight.w600));
+    return Text(
+      text.toUpperCase(),
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.w600,
+          ),
+    );
   }
 }
 
-class _IndicadorCard extends StatelessWidget {
-  const _IndicadorCard({required this.label, required this.valor, required this.sub, required this.estado});
-  final String label;
-  final String valor;
-  final String sub;
-  final _Semaforo estado;
-
-  Color get _dotColor {
-    return switch (estado) {
-      _Semaforo.verde => const Color(0xFF22C55E),
-      _Semaforo.amarillo => const Color(0xFFF59E0B),
-      _Semaforo.rojo => const Color(0xFFEF4444),
-    };
-  }
+class _IndicatorCard extends StatelessWidget {
+  const _IndicatorCard({required this.indicator});
+  final _Indicator indicator;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       elevation: 1,
@@ -213,47 +196,36 @@ class _IndicadorCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: _dotColor, shape: BoxShape.circle)),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration:
+                      BoxDecoration(color: indicator.dotColor, shape: BoxShape.circle),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(label,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                  child: Text(indicator.label,
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(color: cs.onSurfaceVariant),
                       overflow: TextOverflow.ellipsis),
                 ),
               ],
             ),
-            Text(valor,
+            Text(indicator.value,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
-            Text(sub,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                    ?.copyWith(fontWeight: FontWeight.bold, color: cs.onSurface),
+                overflow: TextOverflow.ellipsis),
+            Text(indicator.sub,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: cs.onSurfaceVariant),
                 overflow: TextOverflow.ellipsis),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MovimientosCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 1,
-      child: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.receipt_long_outlined, color: Colors.grey, size: 36),
-              SizedBox(height: 8),
-              Text('Sin movimientos aún', style: TextStyle(color: Colors.grey)),
-            ],
-          ),
         ),
       ),
     );

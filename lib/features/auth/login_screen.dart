@@ -1,3 +1,4 @@
+import 'package:ecua_inventario/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,7 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    // TODO: conectar con backend
     await Future<void>.delayed(const Duration(seconds: 1));
     if (mounted) {
       setState(() => _loading = false);
@@ -35,23 +35,46 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 64),
+                const SizedBox(height: 48),
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: kBrandAmber,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Icon(Icons.restaurant_menu, size: 40, color: kBrandNavy),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    'EcuaInventario',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold, color: cs.primary),
+                  ),
+                ),
+                const SizedBox(height: 40),
                 Text(
                   'Bienvenido',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text('Inicia sesión en tu negocio', style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
@@ -76,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 FilledButton(
                   onPressed: _loading ? null : _submit,
                   child: _loading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary))
                       : const Text('Iniciar sesión'),
                 ),
                 const SizedBox(height: 16),
@@ -84,6 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () => context.go('/register'),
                   child: const Text('¿No tienes cuenta? Regístrate'),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),

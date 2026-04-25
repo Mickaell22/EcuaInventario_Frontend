@@ -18,21 +18,18 @@ ThemeData buildTheme(Color seedColor, Brightness brightness) {
     colorScheme: colorScheme,
     textTheme: textTheme,
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: brightness == Brightness.dark
-          ? const Color(0xFF1A1A2E)
-          : Colors.white,
       indicatorColor: kBrandAmber.withValues(alpha: 0.2),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return const IconThemeData(color: kBrandNavy);
+          return IconThemeData(color: colorScheme.primary);
         }
-        return const IconThemeData(color: Color(0xFF9E9E9E));
+        return IconThemeData(color: colorScheme.onSurfaceVariant);
       }),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: kBrandNavy);
+          return GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: colorScheme.primary);
         }
-        return GoogleFonts.inter(fontSize: 11, color: const Color(0xFF9E9E9E));
+        return GoogleFonts.inter(fontSize: 11, color: colorScheme.onSurfaceVariant);
       }),
     ),
   );

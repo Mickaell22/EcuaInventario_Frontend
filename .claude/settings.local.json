@@ -11,7 +11,8 @@
       "Bash(sudo -u mickaell /opt/flutter/bin/dart *)",
       "Bash(/home/mickaell/Android/Sdk/platform-tools/adb *)",
       "Bash(git *)",
-      "Bash(chown -R mickaell:mickaell \"/home/mickaell/Desktop/Proyectos de MICKAELL/EcuaInventario/Frontend/.git\")"
+      "Bash(chown -R mickaell:mickaell \"/home/mickaell/Desktop/Proyectos de MICKAELL/EcuaInventario/Frontend/.git\")",
+      "Bash(ANDROID_HOME=/home/mickaell/Android/Sdk /opt/flutter/bin/flutter analyze)"
     ]
   }
 }

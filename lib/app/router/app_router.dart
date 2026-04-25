@@ -6,6 +6,7 @@ import 'package:ecua_inventario/features/onboarding/onboarding_screen.dart';
 import 'package:ecua_inventario/features/settings/settings_screen.dart';
 import 'package:ecua_inventario/shared/widgets/placeholder_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 final appRouter = GoRouter(
@@ -93,8 +94,8 @@ class MainShell extends StatelessWidget {
           return;
         }
         final shouldExit = await _onWillPop(context);
-        if (shouldExit && context.mounted) {
-          Navigator.of(context).pop();
+        if (shouldExit) {
+          await SystemNavigator.pop();
         }
       },
       child: Scaffold(

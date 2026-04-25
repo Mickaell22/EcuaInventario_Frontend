@@ -1,20 +1,20 @@
 import 'package:ecua_inventario/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-class _ChatMessage {
-  const _ChatMessage({required this.text, required this.isUser, this.proposal});
+class _Message {
+  const _Message({required this.text, required this.isUser, this.proposal});
   final String text;
   final bool isUser;
   final _Proposal? proposal;
 }
 
 class _Proposal {
-  const _Proposal({required this.summary, required this.data});
-  final String summary;
-  final Map<String, String> data;
+  const _Proposal({required this.title, required this.fields});
+  final String title;
+  final Map<String, String> fields;
 }
 
-const _sugerencias = [
+const _kSuggestions = [
   '¿Cómo va mi negocio?',
   '¿Qué insumos están bajos?',
   '¿Receta más rentable?',
@@ -29,28 +29,29 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _messages = <_ChatMessage>[
-    const _ChatMessage(
-      text: '¡Hola! Soy tu asistente de EcuaInventario ✨\nPuedes enviarme un mensaje, grabar un audio o tomar una foto de una factura.',
+  final _messages = <_Message>[
+    const _Message(
+      text:
+          '¡Hola! Soy tu asistente de EcuaInventario ✨\nEnvíame un mensaje, graba un audio o toma una foto de factura.',
       isUser: false,
     ),
   ];
   final _controller = TextEditingController();
-  final _scrollController = ScrollController();
-  bool _sending = false;
+  final _scroll = ScrollController();
+  bool _busy = false;
 
   @override
   void dispose() {
     _controller.dispose();
-    _scrollController.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollDown() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -58,38 +59,36 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Future<void> _sendMessage(String text) async {
-    if (text.trim().isEmpty || _sending) return;
+  Future<void> _send(String text) async {
+    if (text.trim().isEmpty || _busy) return;
     _controller.clear();
     setState(() {
-      _messages.add(_ChatMessage(text: text.trim(), isUser: true));
-      _sending = true;
+      _messages.add(_Message(text: text.trim(), isUser: true));
+      _busy = true;
     });
-    _scrollToBottom();
+    _scrollDown();
     await Future<void>.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     setState(() {
-      _messages.add(
-        const _ChatMessage(
-          text: 'Entendido. Detecté el siguiente movimiento de inventario:',
-          isUser: false,
-          proposal: _Proposal(
-            summary: 'Entrada de insumo',
-            data: {
-              'Producto': 'Aceite de oliva',
-              'Cantidad': '5 litros',
-              'Costo': '\$12.50',
-              'Proveedor': 'Sin asignar',
-            },
-          ),
+      _messages.add(const _Message(
+        text: 'Entendido. Detecté el siguiente movimiento de inventario:',
+        isUser: false,
+        proposal: _Proposal(
+          title: 'Entrada de insumo',
+          fields: {
+            'Producto': 'Aceite de oliva',
+            'Cantidad': '5 litros',
+            'Costo': '\$12.50',
+            'Proveedor': 'Sin asignar',
+          },
         ),
-      );
-      _sending = false;
+      ));
+      _busy = false;
     });
-    _scrollToBottom();
+    _scrollDown();
   }
 
-  void _confirmProposal() {
+  void _confirm() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Movimiento registrado correctamente'),
@@ -101,21 +100,50 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: kBrandNavy,
+        foregroundColor: Colors.white,
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(color: kBrandAmber, shape: BoxShape.circle),
+              child: const Icon(Icons.auto_awesome, size: 18, color: kBrandNavy),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Asistente IA',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+                Text('Siempre disponible',
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(color: Colors.white54)),
+              ],
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
-          _ChatHeader(),
           Expanded(
             child: ListView.builder(
-              controller: _scrollController,
+              controller: _scroll,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: _messages.length,
-              itemBuilder: (context, i) => _MessageBubble(
-                message: _messages[i],
-                onConfirm: _confirmProposal,
-              ),
+              itemBuilder: (context, i) =>
+                  _MessageBubble(message: _messages[i], onConfirm: _confirm),
             ),
           ),
-          if (_sending)
+          if (_busy)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
@@ -126,82 +154,51 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: kBrandAmber),
                   ),
                   const SizedBox(width: 8),
-                  Text('Procesando...', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                  Text('Procesando...',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
-          _SugerenciasBar(onTap: _sendMessage),
-          _InputBar(controller: _controller, onSend: _sendMessage),
+          _SuggestionsBar(onTap: _send),
+          _InputBar(controller: _controller, onSend: _send),
         ],
       ),
     );
   }
 }
 
-class _ChatHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: kBrandNavy,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
-        left: 16,
-        right: 16,
-        bottom: 16,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(color: kBrandAmber, shape: BoxShape.circle),
-            child: const Icon(Icons.auto_awesome, size: 20, color: kBrandNavy),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Asistente IA',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
-                Text('IA · Siempre disponible',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white54)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SugerenciasBar extends StatelessWidget {
-  const _SugerenciasBar({required this.onTap});
+class _SuggestionsBar extends StatelessWidget {
+  const _SuggestionsBar({required this.onTap});
   final void Function(String) onTap;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return SizedBox(
-      height: 36,
+      height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _sugerencias.length,
+        itemCount: _kSuggestions.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) => GestureDetector(
-          onTap: () => onTap(_sugerencias[i]),
+          onTap: () => onTap(_kSuggestions[i]),
           child: Container(
+            alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cs.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: cs.outlineVariant),
             ),
-            child: Text(_sugerencias[i],
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey.shade700)),
+            child: Text(_kSuggestions[i],
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: cs.onSurfaceVariant)),
           ),
         ),
       ),
@@ -211,12 +208,13 @@ class _SugerenciasBar extends StatelessWidget {
 
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({required this.message, required this.onConfirm});
-  final _ChatMessage message;
+  final _Message message;
   final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
     final isUser = message.isUser;
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -236,10 +234,11 @@ class _MessageBubble extends StatelessWidget {
               ],
               Flexible(
                 child: Container(
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                  constraints:
+                      BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isUser ? kBrandNavy : Colors.white,
+                    color: isUser ? kBrandNavy : cs.surfaceContainerHighest,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -247,12 +246,19 @@ class _MessageBubble extends StatelessWidget {
                       bottomRight: Radius.circular(isUser ? 4 : 16),
                     ),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2)),
                     ],
                   ),
                   child: Text(
                     message.text,
-                    style: TextStyle(color: isUser ? Colors.white : Colors.grey.shade800, fontSize: 14, height: 1.4),
+                    style: TextStyle(
+                      color: isUser ? Colors.white : cs.onSurface,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ),
@@ -275,6 +281,7 @@ class _ProposalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(left: 36),
       padding: const EdgeInsets.all(14),
@@ -286,28 +293,34 @@ class _ProposalCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(proposal.summary,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold, color: kBrandNavy)),
+          Text(proposal.title,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(fontWeight: FontWeight.bold, color: cs.primary)),
           const SizedBox(height: 8),
-          ...proposal.data.entries.map(
-            (e) => Padding(
+          for (final e in proposal.fields.entries)
+            Padding(
               padding: const EdgeInsets.only(bottom: 3),
               child: Row(
                 children: [
                   Text('${e.key}: ',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                   Text(e.value, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
             ),
-          ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: FilledButton(
                   onPressed: onConfirm,
-                  style: FilledButton.styleFrom(backgroundColor: kBrandNavy, minimumSize: const Size(0, 36)),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: kBrandNavy, minimumSize: const Size(0, 36)),
                   child: const Text('Confirmar', style: TextStyle(fontSize: 13)),
                 ),
               ),
@@ -334,6 +347,7 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: EdgeInsets.only(
         left: 12,
@@ -342,27 +356,27 @@ class _InputBar extends StatelessWidget {
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        color: cs.surface,
+        border: Border(top: BorderSide(color: cs.outlineVariant)),
       ),
       child: Row(
         children: [
           IconButton(
             icon: const Icon(Icons.mic_outlined),
             onPressed: () {},
-            color: Colors.grey,
+            color: cs.onSurfaceVariant,
             iconSize: 22,
           ),
           IconButton(
             icon: const Icon(Icons.photo_camera_outlined),
             onPressed: () {},
-            color: Colors.grey,
+            color: cs.onSurfaceVariant,
             iconSize: 22,
           ),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: cs.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: TextField(
@@ -370,7 +384,8 @@ class _InputBar extends StatelessWidget {
                 decoration: const InputDecoration(
                   hintText: 'Escribe un mensaje...',
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
                 textInputAction: TextInputAction.send,
                 onSubmitted: onSend,
