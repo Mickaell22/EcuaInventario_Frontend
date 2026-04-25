@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _OnboardingPage {
   const _OnboardingPage({required this.icon, required this.title, required this.body});
@@ -43,11 +44,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  Future<void> _complete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_done', true);
+    if (mounted) context.go('/login');
+  }
+
   void _next() {
     if (_current < _pages.length - 1) {
       _controller.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else {
-      context.go('/login');
+      _complete();
     }
   }
 
@@ -110,7 +117,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: [
                   FilledButton(onPressed: _next, child: Text(_current < _pages.length - 1 ? 'Siguiente' : 'Empezar')),
                   if (_current < _pages.length - 1)
-                    TextButton(onPressed: () => context.go('/login'), child: const Text('Omitir')),
+                    TextButton(onPressed: _complete, child: const Text('Omitir')),
                 ],
               ),
             ),

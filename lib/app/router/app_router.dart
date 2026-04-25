@@ -8,6 +8,7 @@ import 'package:ecua_inventario/shared/widgets/placeholder_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -124,9 +125,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) context.go('/login');
-    });
+    _navigate();
+  }
+
+  Future<void> _navigate() async {
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final done = prefs.getBool('onboarding_done') ?? false;
+    context.go(done ? '/login' : '/onboarding');
   }
 
   @override

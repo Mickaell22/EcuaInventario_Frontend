@@ -68,7 +68,8 @@ lib/
 ### Navegación
 
 - **Fuera del shell** (`/splash`, `/login`, `/onboarding`, `/register`): sin barra inferior.
-- **Dentro del `StatefulShellRoute`** (`/home`, `/products`, `/chat`, `/suppliers`, `/settings`): envueltas en `MainShell` con `NavigationBar` y `PopScope` (atrás → va a `/home`; desde `/home` muestra diálogo de salida).
+- **Dentro del `StatefulShellRoute`** (`/home`, `/products`, `/chat`, `/suppliers`, `/settings`): envueltas en `MainShell` con `NavigationBar` y `PopScope` (atrás → va a `/home`; desde `/home` muestra diálogo de salida con `SystemNavigator.pop()`).
+- **Flujo de primera vez:** `SplashScreen` lee `onboarding_done` de `SharedPreferences`. Si es `false` (o no existe) → `/onboarding`; si es `true` → `/login`. El onboarding guarda el flag al presionar "Empezar" u "Omitir`.
 
 ### Theming
 
@@ -104,8 +105,8 @@ lib/
 
 | Pantalla | Archivo | Notas |
 |---|---|---|
-| Splash | `app_router.dart` (`SplashScreen`) | Completa |
-| Onboarding | `features/onboarding/onboarding_screen.dart` | Completa |
+| Splash | `app_router.dart` (`SplashScreen`) | Completa. Lee `onboarding_done` y redirige a onboarding o login |
+| Onboarding | `features/onboarding/onboarding_screen.dart` | Completa. Guarda `onboarding_done=true` al finalizar u omitir |
 | Login | `features/auth/login_screen.dart` | Completa, logo de marca incluido |
 | Home / Dashboard | `features/home/home_screen.dart` | Completa, mock data |
 | Chat IA | `features/chat/chat_screen.dart` | Flujo mock completo (texto → propuesta → confirmar) |
@@ -129,5 +130,9 @@ lib/
 
 ### Deuda técnica conocida
 
-- **Modo oscuro**: aún hay elementos con colores incorrectos en modo oscuro — revisar y corregir en la próxima sesión siguiendo la tabla de tokens del sistema.
 - **No hay integración real con backend.** Al conectar, los cambios van en los archivos de cada feature; el cliente HTTP en `core/api/api_client.dart` ya tiene el interceptor JWT listo.
+
+### Correcciones aplicadas (historial)
+
+- **Modo oscuro resuelto:** se eliminaron todos los `Colors.grey` y `kBrandNavy` hardcodeados en texto/botones. Ahora se usan `colorScheme.primary`, `colorScheme.onPrimary` y `colorScheme.onSurfaceVariant` en `login_screen.dart`, `home_screen.dart`, `chat_screen.dart`, `settings_screen.dart` y `app_theme.dart` (NavigationBar).
+- **Crash al salir:** el `PopScope` de `MainShell` usaba `Navigator.pop()` que crasheaba con GoRouter; corregido a `SystemNavigator.pop()`.
