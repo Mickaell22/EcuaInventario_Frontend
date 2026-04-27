@@ -49,18 +49,19 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const _Section(
+          _Section(
             title: 'Negocio',
             children: [
-              ListTile(
+              const ListTile(
                 leading: Icon(Icons.store_outlined),
                 title: Text('Nombre del negocio'),
                 trailing: Icon(Icons.chevron_right),
               ),
               ListTile(
-                leading: Icon(Icons.person_outline),
-                title: Text('Datos personales'),
-                trailing: Icon(Icons.chevron_right),
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Datos personales'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/profile'),
               ),
             ],
           ),

@@ -57,9 +57,12 @@ class HomeScreen extends StatelessWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: kBrandAmber.withValues(alpha: 0.2),
-              child: const Icon(Icons.person_outline, color: kBrandAmber, size: 20),
+            child: GestureDetector(
+              onTap: () => context.push('/profile'),
+              child: CircleAvatar(
+                backgroundColor: kBrandAmber.withValues(alpha: 0.2),
+                child: const Icon(Icons.person_outline, color: kBrandAmber, size: 20),
+              ),
             ),
           ),
         ],

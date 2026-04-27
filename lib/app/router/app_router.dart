@@ -1,10 +1,16 @@
 import 'package:ecua_inventario/app/theme/app_theme.dart';
 import 'package:ecua_inventario/features/auth/login_screen.dart';
+import 'package:ecua_inventario/features/auth/register_screen.dart';
 import 'package:ecua_inventario/features/chat/chat_screen.dart';
 import 'package:ecua_inventario/features/home/home_screen.dart';
 import 'package:ecua_inventario/features/onboarding/onboarding_screen.dart';
+import 'package:ecua_inventario/features/products/movement_screen.dart';
+import 'package:ecua_inventario/features/products/product_detail_screen.dart';
+import 'package:ecua_inventario/features/products/products_screen.dart';
+import 'package:ecua_inventario/features/profile/profile_screen.dart';
 import 'package:ecua_inventario/features/settings/settings_screen.dart';
-import 'package:ecua_inventario/shared/widgets/placeholder_screen.dart';
+import 'package:ecua_inventario/features/suppliers/supplier_detail_screen.dart';
+import 'package:ecua_inventario/features/suppliers/suppliers_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -27,7 +33,11 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const PlaceholderScreen(title: 'Registro de negocio'),
+      builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
@@ -36,13 +46,48 @@ final appRouter = GoRouter(
           GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
         ]),
         StatefulShellBranch(routes: [
-          GoRoute(path: '/products', builder: (context, state) => const PlaceholderScreen(title: 'Productos')),
+          GoRoute(
+            path: '/products',
+            builder: (context, state) => const ProductsScreen(),
+            routes: [
+              GoRoute(
+                path: 'new',
+                builder: (context, state) => const ProductDetailScreen(productId: null),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) =>
+                    ProductDetailScreen(productId: state.pathParameters['id']),
+                routes: [
+                  GoRoute(
+                    path: 'move',
+                    builder: (context, state) =>
+                        MovementScreen(productId: state.pathParameters['id']!),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
         ]),
         StatefulShellBranch(routes: [
-          GoRoute(path: '/suppliers', builder: (context, state) => const PlaceholderScreen(title: 'Proveedores')),
+          GoRoute(
+            path: '/suppliers',
+            builder: (context, state) => const SuppliersScreen(),
+            routes: [
+              GoRoute(
+                path: 'new',
+                builder: (context, state) => const SupplierDetailScreen(supplierId: null),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) =>
+                    SupplierDetailScreen(supplierId: state.pathParameters['id']),
+              ),
+            ],
+          ),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
