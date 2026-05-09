@@ -40,7 +40,8 @@ final appRouter = GoRouter(
       builder: (context, state) => const ProfileScreen(),
     ),
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
+      builder: (context, state, navigationShell) =>
+          MainShell(navigationShell: navigationShell),
       branches: [
         StatefulShellBranch(routes: [
           GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
@@ -52,7 +53,8 @@ final appRouter = GoRouter(
             routes: [
               GoRoute(
                 path: 'new',
-                builder: (context, state) => const ProductDetailScreen(productId: null),
+                builder: (context, state) =>
+                    const ProductDetailScreen(productId: null),
               ),
               GoRoute(
                 path: ':id',
@@ -79,7 +81,8 @@ final appRouter = GoRouter(
             routes: [
               GoRoute(
                 path: 'new',
-                builder: (context, state) => const SupplierDetailScreen(supplierId: null),
+                builder: (context, state) =>
+                    const SupplierDetailScreen(supplierId: null),
               ),
               GoRoute(
                 path: ':id',
@@ -90,25 +93,21 @@ final appRouter = GoRouter(
           ),
         ]),
         StatefulShellBranch(routes: [
-          GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+          GoRoute(
+              path: '/settings',
+              builder: (context, state) => const SettingsScreen()),
         ]),
       ],
     ),
   ],
 );
 
+// ── Main shell ──────────────────────────────────────────────────────────────
+
 class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
-
-  static const _destinations = [
-    NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Inicio'),
-    NavigationDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label: 'Inventario'),
-    NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'Asistente'),
-    NavigationDestination(icon: Icon(Icons.local_shipping_outlined), selectedIcon: Icon(Icons.local_shipping), label: 'Proveedores'),
-    NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Ajustes'),
-  ];
 
   Future<bool> _onWillPop(BuildContext context) async {
     final result = await showDialog<bool>(
@@ -117,7 +116,10 @@ class MainShell extends StatelessWidget {
         title: const Text('¿Salir de EcuaInventario?'),
         content: const Text('¿Deseas cerrar la aplicación?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: kBrandNavy),
@@ -140,24 +142,217 @@ class MainShell extends StatelessWidget {
           return;
         }
         final shouldExit = await _onWillPop(context);
-        if (shouldExit) {
-          await SystemNavigator.pop();
-        }
+        if (shouldExit) await SystemNavigator.pop();
       },
       child: Scaffold(
         body: navigationShell,
-        bottomNavigationBar: NavigationBar(
+        bottomNavigationBar: _CustomNavBar(
           selectedIndex: navigationShell.currentIndex,
-          onDestinationSelected: (index) => navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
+          onSelect: (i) => navigationShell.goBranch(
+            i,
+            initialLocation: i == navigationShell.currentIndex,
           ),
-          destinations: _destinations,
         ),
       ),
     );
   }
 }
+
+// ── Custom bottom nav with elevated center chat button ──────────────────────
+
+class _CustomNavBar extends StatelessWidget {
+  const _CustomNavBar({required this.selectedIndex, required this.onSelect});
+
+  final int selectedIndex;
+  final void Function(int) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return SizedBox(
+      height: 64 + bottomPad,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          // Bar background + border
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: cs.surface,
+                border: Border(
+                  top: BorderSide(color: cs.outlineVariant, width: 0.5),
+                ),
+              ),
+            ),
+          ),
+          // Nav items — 4 items with an empty center slot
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 64,
+            child: Row(
+              children: [
+                _NavBarItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home,
+                  label: 'Inicio',
+                  selected: selectedIndex == 0,
+                  activeColor: kBrandNavy,
+                  inactiveColor: cs.onSurfaceVariant,
+                  onTap: () => onSelect(0),
+                ),
+                _NavBarItem(
+                  icon: Icons.inventory_2_outlined,
+                  activeIcon: Icons.inventory_2,
+                  label: 'Inventario',
+                  selected: selectedIndex == 1,
+                  activeColor: kBrandNavy,
+                  inactiveColor: cs.onSurfaceVariant,
+                  onTap: () => onSelect(1),
+                ),
+                const Expanded(child: SizedBox()),
+                _NavBarItem(
+                  icon: Icons.local_shipping_outlined,
+                  activeIcon: Icons.local_shipping,
+                  label: 'Proveedores',
+                  selected: selectedIndex == 3,
+                  activeColor: kBrandNavy,
+                  inactiveColor: cs.onSurfaceVariant,
+                  onTap: () => onSelect(3),
+                ),
+                _NavBarItem(
+                  icon: Icons.settings_outlined,
+                  activeIcon: Icons.settings,
+                  label: 'Ajustes',
+                  selected: selectedIndex == 4,
+                  activeColor: kBrandNavy,
+                  inactiveColor: cs.onSurfaceVariant,
+                  onTap: () => onSelect(4),
+                ),
+              ],
+            ),
+          ),
+          // Elevated center chat button
+          Positioned(
+            top: -18,
+            child: _ChatNavButton(
+              isActive: selectedIndex == 2,
+              surfaceColor: cs.surface,
+              onTap: () => onSelect(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavBarItem extends StatelessWidget {
+  const _NavBarItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.selected,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool selected;
+  final Color activeColor;
+  final Color inactiveColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 36,
+              height: 24,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: selected
+                    ? activeColor.withValues(alpha: 0.12)
+                    : Colors.transparent,
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                selected ? activeIcon : icon,
+                size: 22,
+                color: selected ? activeColor : inactiveColor,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? activeColor : inactiveColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatNavButton extends StatelessWidget {
+  const _ChatNavButton({
+    required this.isActive,
+    required this.surfaceColor,
+    required this.onTap,
+  });
+
+  final bool isActive;
+  final Color surfaceColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isActive ? kBrandNavy : kBrandAmber,
+          border: Border.all(color: surfaceColor, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: kBrandAmber.withValues(alpha: 0.45),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.auto_awesome,
+          size: 22,
+          color: isActive ? Colors.white : kBrandNavy,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Splash ──────────────────────────────────────────────────────────────────
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -191,25 +386,38 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
                 color: kBrandAmber,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: kBrandAmber.withValues(alpha: 0.45),
+                    blurRadius: 40,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.restaurant_menu, size: 44, color: kBrandNavy),
+              child: const Icon(Icons.restaurant_menu, size: 48, color: kBrandNavy),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Text(
               'EcuaInventario',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
             ),
             const SizedBox(height: 6),
-            Text('Gestión inteligente para tu negocio',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white60)),
+            Text(
+              'Gestión inteligente para tu negocio',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.white54),
+            ),
           ],
         ),
       ),

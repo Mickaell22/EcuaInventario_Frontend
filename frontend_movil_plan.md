@@ -42,7 +42,7 @@ Plataforma SaaS gastronómica para pequeños negocios de comida en Ecuador. Este
 
 ## Theming
 
-El backend devuelve, por negocio:
+El backend devolverá, por negocio:
 
 ```json
 {
@@ -56,6 +56,10 @@ El backend devuelve, por negocio:
 
 Flutter usa `ColorScheme.fromSeed(seedColor: ..., brightness: ...)` para generar las paletas clara y oscura automáticamente. La tipografía y los iconos son fijos para todos los negocios.
 
+Constantes de marca definidas:
+- `kBrandNavy = Color(0xFF0F2044)` — AppBars, burbujas de usuario en chat
+- `kBrandAmber = Color(0xFFF59E0B)` — FAB, botón enviar, ícono IA
+
 ---
 
 ## Arquitectura
@@ -64,141 +68,130 @@ Estructura feature-first:
 
 ```
 lib/
-├── main.dart
+├── main.dart                  # initializeDateFormatting('es') → ProviderScope → EcuaInventarioApp
 ├── app/
-│   ├── app.dart              # MaterialApp, theme, router
-│   ├── theme/                # ColorScheme, TextTheme, builders
-│   └── router/               # go_router config
+│   ├── app.dart               # MaterialApp.router, consume themeProvider
+│   ├── theme/
+│   │   ├── app_theme.dart     # buildTheme(seedColor, brightness) + constantes de marca
+│   │   └── theme_provider.dart # ThemeNotifier (Riverpod) persiste en SharedPreferences
+│   └── router/
+│       └── app_router.dart    # GoRouter + StatefulShellRoute + SplashScreen + MainShell
 ├── core/
-│   ├── api/                  # cliente HTTP, interceptores, manejo de errores
-│   ├── storage/              # SharedPreferences, secure storage
-│   └── utils/
+│   ├── config/app_config.dart # AppConfig.baseUrl vía --dart-define
+│   └── api/api_client.dart    # Dio + interceptor JWT (flutter_secure_storage)
 ├── features/
 │   ├── auth/
-│   ├── onboarding/
-│   ├── home/
-│   ├── chat/
+│   │   ├── login_screen.dart
+│   │   └── register_screen.dart
+│   ├── onboarding/onboarding_screen.dart
+│   ├── home/home_screen.dart
+│   ├── chat/chat_screen.dart
 │   ├── products/
-│   ├── inventory/
+│   │   ├── product_models.dart
+│   │   ├── products_screen.dart
+│   │   ├── product_detail_screen.dart
+│   │   └── movement_screen.dart
 │   ├── suppliers/
-│   ├── settings/
-│   └── profile/
-└── shared/
-    └── widgets/              # componentes reutilizables
+│   │   ├── supplier_models.dart
+│   │   ├── suppliers_screen.dart
+│   │   └── supplier_detail_screen.dart
+│   ├── profile/profile_screen.dart
+│   └── settings/settings_screen.dart
+└── shared/widgets/
+    └── placeholder_screen.dart
 ```
 
-Dentro de cada feature, mantener plano en MVP. Subdividir en `data/`, `domain/`, `presentation/` solo cuando la feature crezca.
+---
+
+## Navegación
+
+- **Fuera del shell** (`/splash`, `/login`, `/onboarding`, `/register`, `/profile`): sin barra inferior.
+- **Dentro del `StatefulShellRoute`** (`/home`, `/products`, `/chat`, `/suppliers`, `/settings`): envueltas en `MainShell` con `NavigationBar` y `PopScope` (atrás → va a `/home`; desde `/home` muestra diálogo de salida con `SystemNavigator.pop()`).
+- **Sub-rutas de products:** `/products/new`, `/products/:id`, `/products/:id/move`.
+- **Sub-rutas de suppliers:** `/suppliers/new`, `/suppliers/:id`.
+- **Perfil:** accesible desde el avatar del AppBar en `HomeScreen` → `context.push('/profile')`.
+- **Flujo de primera vez:** `SplashScreen` lee `onboarding_done` de `SharedPreferences`. Si es `false` → `/onboarding`; si es `true` → `/login`.
 
 ---
 
-## Pantallas del MVP
+## Estado actual — Fase 1 completada
 
-### Alcance de esta primera fase (1 a 6)
+Todas las pantallas del MVP están implementadas con datos mock. El backend aún no existe; al conectarlo se reemplazan los mocks con llamadas reales sin tocar los widgets.
 
-| # | Pantalla | Descripción |
-|---|---|---|
-| 1 | Splash | Carga inicial, verifica sesión, trae el theme del negocio del backend |
-| 2 | Onboarding | 2-3 pantallas presentando el valor de la app, solo primera vez |
-| 3 | Login | Email y contraseña |
-| 4 | Registro de negocio | Datos básicos del negocio + selección de color seed |
-| 5 | Home / Dashboard | Resumen del día: ventas, costos, alertas de stock, accesos rápidos |
-| 6 | Chat IA | Texto, audio y foto. Muestra propuestas del LLM con botones de confirmar/editar antes de guardar |
+### Pantallas implementadas
 
-### Pendiente para fases siguientes (7 a 12)
+| # | Pantalla | Archivo | Estado |
+|---|---|---|---|
+| 1 | Splash | `app_router.dart` (`SplashScreen`) | ✓ Lee `onboarding_done`, redirige |
+| 2 | Onboarding | `features/onboarding/onboarding_screen.dart` | ✓ Guarda flag al finalizar u omitir |
+| 3 | Login | `features/auth/login_screen.dart` | ✓ Logo de marca incluido |
+| 4 | Registro de negocio | `features/auth/register_screen.dart` | ✓ Tipo de negocio (chips) + selector de color seed |
+| 5 | Home / Dashboard | `features/home/home_screen.dart` | ✓ Mock data; avatar navega a `/profile` |
+| 6 | Chat IA | `features/chat/chat_screen.dart` | ✓ Flujo mock completo (texto → propuesta → confirmar) |
+| 7 | Productos / Insumos | `features/products/products_screen.dart` | ✓ Búsqueda + filtros Todos/Insumos/Platos; FAB |
+| 8 | Detalle de producto | `features/products/product_detail_screen.dart` | ✓ Crear/editar; cálculo de margen automático |
+| 9 | Registro de movimiento | `features/products/movement_screen.dart` | ✓ Entrada/salida con cantidad y nota |
+| 10 | Proveedores | `features/suppliers/suppliers_screen.dart` | ✓ Lista con búsqueda; FAB |
+| 11 | Detalle de proveedor | `features/suppliers/supplier_detail_screen.dart` | ✓ Crear/editar con todos los campos |
+| 12 | Configuración | `features/settings/settings_screen.dart` | ✓ Theming dinámico + link a perfil |
+| 13 | Perfil del usuario | `features/profile/profile_screen.dart` | ✓ Datos personales + cambio de contraseña |
 
-| # | Pantalla | Descripción |
-|---|---|---|
-| 7 | Lista de productos/insumos | Listado con búsqueda, filtros, FAB para agregar |
-| 8 | Detalle de producto | Ver y editar: nombre, precio, costo, margen, stock, proveedor |
-| 9 | Registro rápido de movimiento | Entrada/salida de inventario en pocos taps |
-| 10 | Proveedores | Lista y detalle simple |
-| 11 | Configuración | Datos del negocio, color seed, modo claro/oscuro, cerrar sesión |
-| 12 | Perfil del usuario | Datos personales, cambio de contraseña |
+### Mock data
+
+- **Productos** (`product_models.dart`): 6 insumos + 3 platos típicos ecuatorianos.
+- **Proveedores** (`supplier_models.dart`): 3 proveedores de ejemplo (Quito y Guayaquil).
 
 ---
 
-## Plan de ejecución (fase 1)
+## Fase 2 — Conexión con el backend
 
-### Paso 1: Scaffold del proyecto
+Cuando el backend Django esté disponible, los cambios se concentran en la capa de datos, no en los widgets.
 
-- Crear proyecto Flutter limpio.
-- Configurar dependencias en `pubspec.yaml`:
-  - `flutter_riverpod`
-  - `go_router`
-  - `google_fonts`
-  - `dio`
-  - `shared_preferences`
-  - `flutter_secure_storage`
-- Configurar análisis estático estricto en `analysis_options.yaml`.
-- Estructura de carpetas según la sección Arquitectura.
+### Pasos de integración
 
-### Paso 2: Sistema de theming
-
-- `app/theme/app_theme.dart` con función `buildTheme(seedColor, brightness)` que retorna `ThemeData` usando `ColorScheme.fromSeed`.
-- Aplicar Inter como `textTheme` global.
-- Provider de Riverpod que expone el theme actual (seed color + modo).
-- Persistir preferencia local con `shared_preferences`.
-- Por defecto: seed color de la marca de la plataforma (a definir cuando exista identidad propia, por ahora un azul neutral) + modo `system`.
-
-### Paso 3: Router
-
-- `app/router/app_router.dart` con go_router.
-- Definir todas las rutas (las 12), pero las pantallas pendientes apuntan a un placeholder.
-- Lógica de redirección: si no hay sesión, va a login. Si es primer ingreso, va a onboarding.
-
-### Paso 4: Cliente HTTP base
-
-- `core/api/api_client.dart` con dio configurado.
-- Interceptor para token JWT.
-- Manejo centralizado de errores.
-- BaseUrl desde variable de entorno o constante.
-
-### Paso 5: Pantallas 1 a 6
-
-Orden recomendado de implementación:
-
-1. **Splash** — Lo más simple, valida que el theming carga.
-2. **Login** — Valida flujo completo: form, llamada al backend, guardado de token, redirección.
-3. **Registro de negocio** — Incluye selector de color seed (color picker simple).
-4. **Onboarding** — Pantallas estáticas con PageView.
-5. **Home / Dashboard** — Por ahora con datos mock, se conecta al backend cuando los endpoints existan.
-6. **Chat IA** — La más compleja. Subdividir:
-   - UI base del chat (mensajes del usuario y del asistente).
-   - Input de texto.
-   - Grabación de audio (paquete `record` o similar).
-   - Captura/selección de foto.
-   - Tarjeta de propuesta del LLM con botones confirmar/editar.
+1. Definir `BASE_URL` en `AppConfig` apuntando al backend Railway.
+2. **Auth:** conectar login y registro a los endpoints JWT reales; guardar `access` y `refresh` en `flutter_secure_storage`. El interceptor de Dio ya está listo.
+3. **Negocio:** traer `seed_color` y `theme_mode` reales desde `/api/negocio/` en el Splash y aplicarlos al `ThemeNotifier`.
+4. **Productos y proveedores:** reemplazar listas mock con providers Riverpod que llamen a la API.
+5. **Dashboard:** reemplazar datos mock con la respuesta de `/api/dashboard/`.
+6. **Chat IA:** enviar mensajes, audio y fotos a los endpoints reales y mostrar las propuestas del LLM.
 
 ---
 
 ## Convenciones de código
 
-- Nombres de archivos en `snake_case`.
-- Widgets en `PascalCase`.
-- Un widget público por archivo.
-- Separar lógica de UI: providers de Riverpod manejan estado, los widgets solo lo consumen.
-- No usar `StatefulWidget` si Riverpod resuelve el caso.
-- Constantes de diseño (paddings, radios, durations) centralizadas en `app/theme/`.
+- Nombres de archivos en `snake_case`, widgets en `PascalCase`, un widget público por archivo.
+- Imports con ruta de paquete completa (`package:ecua_inventario/...`), nunca relativos.
+- No usar `StatefulWidget` si Riverpod resuelve el estado.
 - Strings de UI en español.
+- Análisis estático estricto (`strict-casts`, `strict-inference`, `strict-raw-types`). Debe terminar en `No issues found!`.
+- **Nunca usar `Colors.white`, `Colors.grey.shade*` ni colores hardcodeados en widgets.** Siempre `Theme.of(context).colorScheme.*`. Excepción: `kBrandNavy` en AppBars y burbujas de usuario en chat.
+
+### Tokens de color a usar
+
+| Necesidad | Token |
+|---|---|
+| Fondo de superficie/card | `colorScheme.surface` / `colorScheme.surfaceContainerHighest` |
+| Texto principal | `colorScheme.onSurface` |
+| Texto secundario/hint | `colorScheme.onSurfaceVariant` |
+| Bordes/divisores | `colorScheme.outlineVariant` |
+| Color primario adaptable | `colorScheme.primary` |
+| Iconos secundarios | `colorScheme.onSurfaceVariant` |
+
+---
+
+## Correcciones aplicadas
+
+- **Modo oscuro:** eliminados todos los `Colors.grey` y `kBrandNavy` hardcodeados en texto/botones. Ahora se usan tokens `colorScheme`.
+- **Crash al salir:** `PopScope` usaba `Navigator.pop()` que crasheaba con GoRouter; corregido a `SystemNavigator.pop()`.
+- **`DropdownButtonFormField.value` deprecado:** migrado a `initialValue` en `product_detail_screen.dart`.
 
 ---
 
 ## Lo que NO se hace en esta fase
 
-- Pantallas 7 a 12.
-- Integración real con backend (se trabaja con mocks o endpoints stub).
 - Notificaciones push.
 - Modo offline.
-- Tests automatizados extensivos (sí pruebas básicas de smoke).
+- Tests automatizados extensivos.
 - Deploy a stores.
-
----
-
-## Criterios de cierre de la fase 1
-
-- App instalable en Android (debug build).
-- Theming dinámico funciona: cambiar el seed color desde configuración (aunque sea hardcodeado por ahora) actualiza toda la UI.
-- Modo claro y oscuro funcionan y se pueden alternar.
-- Las 6 pantallas navegan correctamente entre sí con go_router.
-- Chat IA muestra el flujo completo: enviar mensaje, ver propuesta, confirmar, ver mensaje de éxito (aunque la respuesta del LLM sea mock).
-- Código pasa el analizador estático sin warnings.
+- Roles múltiples (empleados con permisos distintos).

@@ -51,33 +51,54 @@ lib/
 │   │   ├── app_theme.dart     # buildTheme(seedColor, brightness) + kBrandNavy/kBrandAmber
 │   │   └── theme_provider.dart # ThemeNotifier (Riverpod) persiste en SharedPreferences
 │   └── router/
-│       └── app_router.dart    # GoRouter + StatefulShellRoute + SplashScreen + MainShell
+│       └── app_router.dart    # GoRouter + StatefulShellRoute + SplashScreen + MainShell + _CustomNavBar
 ├── core/
 │   ├── config/app_config.dart # AppConfig.baseUrl vía --dart-define
 │   └── api/api_client.dart    # Dio + interceptor JWT (flutter_secure_storage)
 ├── features/
-│   ├── auth/login_screen.dart
+│   ├── auth/
+│   │   ├── login_screen.dart
+│   │   └── register_screen.dart
 │   ├── onboarding/onboarding_screen.dart
 │   ├── home/home_screen.dart
 │   ├── chat/chat_screen.dart
+│   ├── products/
+│   │   ├── product_models.dart      # MockProduct, ProductCategory, StockStatus, kMockProducts
+│   │   ├── products_screen.dart     # Lista con búsqueda y filtros
+│   │   ├── product_detail_screen.dart # Crear/editar producto, cálculo de margen
+│   │   └── movement_screen.dart     # Registro rápido entrada/salida
+│   ├── suppliers/
+│   │   ├── supplier_models.dart     # MockSupplier, kMockSuppliers
+│   │   ├── suppliers_screen.dart    # Lista con búsqueda
+│   │   └── supplier_detail_screen.dart # Crear/editar proveedor
+│   ├── profile/
+│   │   └── profile_screen.dart      # Datos personales + cambio de contraseña
 │   └── settings/settings_screen.dart
 └── shared/widgets/
-    └── placeholder_screen.dart  # Rutas pendientes de fase 2
+    └── placeholder_screen.dart
 ```
 
 ### Navegación
 
-- **Fuera del shell** (`/splash`, `/login`, `/onboarding`, `/register`): sin barra inferior.
-- **Dentro del `StatefulShellRoute`** (`/home`, `/products`, `/chat`, `/suppliers`, `/settings`): envueltas en `MainShell` con `NavigationBar` y `PopScope` (atrás → va a `/home`; desde `/home` muestra diálogo de salida con `SystemNavigator.pop()`).
-- **Flujo de primera vez:** `SplashScreen` lee `onboarding_done` de `SharedPreferences`. Si es `false` (o no existe) → `/onboarding`; si es `true` → `/login`. El onboarding guarda el flag al presionar "Empezar" u "Omitir`.
+- **Fuera del shell** (`/splash`, `/login`, `/onboarding`, `/register`, `/profile`): sin barra inferior.
+- **Dentro del `StatefulShellRoute`** (`/home`, `/products`, `/chat`, `/suppliers`, `/settings`): envueltas en `MainShell` con `_CustomNavBar` y `PopScope` (atrás → va a `/home`; desde `/home` muestra diálogo de salida con `SystemNavigator.pop()`).
+- **`_CustomNavBar`** (en `app_router.dart`): barra personalizada con 4 ítems normales + botón central elevado para Chat. Implementada con `Stack(clipBehavior: Clip.none)` y `Positioned(top: -18)` para el botón flotante amber. NO usar `NavigationBar` estándar de Material 3.
+- **Sub-rutas de products:** `/products/new`, `/products/:id`, `/products/:id/move`.
+- **Sub-rutas de suppliers:** `/suppliers/new`, `/suppliers/:id`.
+- **Perfil:** accesible desde el avatar del AppBar en `HomeScreen` → `context.push('/profile')`.
+- **Flujo de primera vez:** `SplashScreen` lee `onboarding_done` de `SharedPreferences`. Si es `false` (o no existe) → `/onboarding`; si es `true` → `/login`. El onboarding guarda el flag al presionar "Empezar" u "Omitir".
 
 ### Theming
 
 `buildTheme(seedColor, brightness)` → `ThemeData` con `ColorScheme.fromSeed`. Constantes de marca:
-- `kBrandNavy = Color(0xFF0F2044)` — AppBars, botones primarios, burbujas de usuario en chat
-- `kBrandAmber = Color(0xFFF59E0B)` — FAB, botón enviar, ícono IA
+- `kBrandNavy = Color(0xFF0F2044)` — AppBars, botones primarios, burbujas de usuario en chat, botón chat activo en nav bar
+- `kBrandAmber = Color(0xFFF59E0B)` — FAB, botón enviar, botón chat en nav bar, avatar de perfil
 
-**Regla importante:** nunca usar `Colors.white`, `Colors.grey.shade*` ni colores hardcodeados en widgets. Siempre usar `Theme.of(context).colorScheme.*` para garantizar compatibilidad con modo oscuro. La única excepción son los fondos de `AppBar` y las burbujas de usuario en chat, que usan `kBrandNavy` intencionalmente.
+**Regla importante:** nunca usar `Colors.white`, `Colors.grey.shade*` ni colores hardcodeados en widgets. Siempre usar `Theme.of(context).colorScheme.*` para garantizar compatibilidad con modo oscuro. Las excepciones intencionales son:
+- Fondos de `AppBar` → `kBrandNavy`
+- Burbujas de usuario en chat → `kBrandNavy`
+- Texto/íconos/decoraciones **dentro** de `_HomeAppBar` y `_SummaryBanner` → `Colors.white` con opacidad (siempre sobre fondo navy)
+- Ícono del botón chat activo en `_ChatNavButton` → `Colors.white` (sobre fondo navy)
 
 ### Theming — colores del sistema a usar
 
@@ -90,6 +111,10 @@ lib/
 | Color primario adaptable | `colorScheme.primary` |
 | Iconos secundarios | `colorScheme.onSurfaceVariant` |
 
+### Patrón del AppBar de Home
+
+`HomeScreen` usa `PreferredSize(preferredSize: Size.fromHeight(155))` en lugar del `AppBar` estándar. Contiene `_HomeAppBar` → `_SummaryBanner` embebida. **No agregar** `AppBar` estándar a `HomeScreen`; el patrón `PreferredSize` + `SafeArea(bottom: false)` es intencional para incrustar la tarjeta resumen dentro del header navy.
+
 ## Convenciones
 
 - Archivos en `snake_case`, widgets en `PascalCase`, un widget público por archivo.
@@ -97,42 +122,44 @@ lib/
 - No usar `StatefulWidget` si Riverpod resuelve el estado.
 - Strings de UI en español.
 - Análisis estático estricto (`strict-casts`, `strict-inference`, `strict-raw-types`). Debe terminar en `No issues found!`.
-- Código DRY y KISS: preferir `AppBar` estándar sobre headers custom, `ListView` sobre `CustomScrollView` cuando no haya slivers reales, `for` en lugar de `.map().toList()`.
+- Código DRY y KISS: `ListView` sobre `CustomScrollView` cuando no haya slivers reales, `for` en lugar de `.map().toList()`.
+- Para dark mode en cards con sombra: usar `boxShadow: isDark ? null : [BoxShadow(...)]` + `border: isDark ? Border.all(color: cs.outlineVariant) : null`.
 
 ## Estado actual
 
-### Fase 1 — implementadas (datos mock)
+### Todas las pantallas del MVP — implementadas (datos mock)
 
-| Pantalla | Archivo | Notas |
-|---|---|---|
-| Splash | `app_router.dart` (`SplashScreen`) | Completa. Lee `onboarding_done` y redirige a onboarding o login |
-| Onboarding | `features/onboarding/onboarding_screen.dart` | Completa. Guarda `onboarding_done=true` al finalizar u omitir |
-| Login | `features/auth/login_screen.dart` | Completa, logo de marca incluido |
-| Home / Dashboard | `features/home/home_screen.dart` | Completa, mock data |
-| Chat IA | `features/chat/chat_screen.dart` | Flujo mock completo (texto → propuesta → confirmar) |
-| Settings | `features/settings/settings_screen.dart` | Theming dinámico funcional |
+| # | Pantalla | Archivo | Notas |
+|---|---|---|---|
+| 1 | Splash | `app_router.dart` (`SplashScreen`) | Icono 88×88, glow amber. Lee `onboarding_done`, redirige |
+| 2 | Onboarding | `features/onboarding/onboarding_screen.dart` | Guarda `onboarding_done=true` al finalizar u omitir |
+| 3 | Login | `features/auth/login_screen.dart` | Logo de marca incluido |
+| 4 | Registro de negocio | `features/auth/register_screen.dart` | Tipo de negocio (chips) + selector de color seed |
+| 5 | Home / Dashboard | `features/home/home_screen.dart` | AppBar con resumen embebido + acciones rápidas + movimientos mock |
+| 6 | Chat IA | `features/chat/chat_screen.dart` | Flujo mock completo (texto → propuesta → confirmar) |
+| 7 | Productos / Insumos | `features/products/products_screen.dart` | Búsqueda + filtros Todos/Insumos/Platos; FAB → nuevo |
+| 8 | Detalle de producto | `features/products/product_detail_screen.dart` | Crear/editar; cálculo de margen automático; link a movimiento |
+| 9 | Registro de movimiento | `features/products/movement_screen.dart` | Entrada/salida con cantidad y nota; snackbar de confirmación |
+| 10 | Proveedores | `features/suppliers/suppliers_screen.dart` | Lista con búsqueda; FAB → nuevo |
+| 11 | Detalle de proveedor | `features/suppliers/supplier_detail_screen.dart` | Crear/editar: nombre, contacto, teléfono, email, dirección |
+| 12 | Configuración | `features/settings/settings_screen.dart` | Theming dinámico + link a perfil |
+| 13 | Perfil del usuario | `features/profile/profile_screen.dart` | Datos personales + cambio de contraseña (expandible) |
 
-### Fase 1 — pendientes
+### Mock data
 
-| Pantalla | Ruta | Estado |
-|---|---|---|
-| Registro de negocio | `/register` | Placeholder — por implementar |
-
-### Fase 2 — pendientes (placeholders)
-
-| Pantalla | Ruta |
-|---|---|
-| Productos / Insumos | `/products` |
-| Proveedores | `/suppliers` |
-| Detalle de producto | (sub-ruta de products) |
-| Registro rápido de movimiento | (sub-ruta) |
-| Perfil del usuario | (pendiente de ruta) |
+- **Productos** (`product_models.dart`): 6 insumos + 3 platos típicos ecuatorianos.
+- **Proveedores** (`supplier_models.dart`): 3 proveedores de ejemplo (Quito y Guayaquil).
+- **Movimientos home** (`home_screen.dart`): 3 movimientos mock (aceite de oliva, harina, leche).
 
 ### Deuda técnica conocida
 
 - **No hay integración real con backend.** Al conectar, los cambios van en los archivos de cada feature; el cliente HTTP en `core/api/api_client.dart` ya tiene el interceptor JWT listo.
+- **Mock data estática.** Los formularios simulan guardado con un delay; no modifican el estado en memoria. Al integrar el backend se reemplaza con providers Riverpod que llamen a la API.
+- **Nombre del negocio hardcodeado** en `_HomeAppBar` como `'Cevichería El Pacífico'`. Al integrar auth, leer del perfil del usuario via Riverpod provider.
 
-### Correcciones aplicadas (historial)
+### Correcciones y mejoras aplicadas (historial)
 
-- **Modo oscuro resuelto:** se eliminaron todos los `Colors.grey` y `kBrandNavy` hardcodeados en texto/botones. Ahora se usan `colorScheme.primary`, `colorScheme.onPrimary` y `colorScheme.onSurfaceVariant` en `login_screen.dart`, `home_screen.dart`, `chat_screen.dart`, `settings_screen.dart` y `app_theme.dart` (NavigationBar).
+- **Modo oscuro resuelto:** se eliminaron todos los `Colors.grey` y `kBrandNavy` hardcodeados en texto/botones. Ahora se usan `colorScheme.primary`, `colorScheme.onPrimary` y `colorScheme.onSurfaceVariant`.
 - **Crash al salir:** el `PopScope` de `MainShell` usaba `Navigator.pop()` que crasheaba con GoRouter; corregido a `SystemNavigator.pop()`.
+- **`DropdownButtonFormField.value` deprecado:** migrado a `initialValue` en `product_detail_screen.dart`.
+- **Rediseño UI (prototipo Claude Design):** barra de navegación custom con botón chat elevado amber; `HomeScreen` con AppBar embebido (resumen Ingresos/Gastos/Utilidad), sección de acciones rápidas (4 ítems) y movimientos mock con datos reales.
