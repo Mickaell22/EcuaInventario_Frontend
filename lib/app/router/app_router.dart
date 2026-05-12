@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:ecua_inventario/app/theme/app_theme.dart';
+import 'package:ecua_inventario/core/api/api_client.dart';
 import 'package:ecua_inventario/features/auth/login_screen.dart';
 import 'package:ecua_inventario/features/auth/register_screen.dart';
 import 'package:ecua_inventario/features/chat/chat_screen.dart';
@@ -13,11 +17,43 @@ import 'package:ecua_inventario/features/suppliers/supplier_detail_screen.dart';
 import 'package:ecua_inventario/features/suppliers/suppliers_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const _publicRoutes = {'/splash', '/onboarding', '/login', '/register'};
+const _routerStorage = FlutterSecureStorage();
+
+bool _isJwtExpired(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return true;
+    final payload = jsonDecode(
+      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+    ) as Map<String, dynamic>;
+    final exp = payload['exp'] as int?;
+    if (exp == null) return true;
+    return DateTime.now().isAfter(
+      DateTime.fromMillisecondsSinceEpoch(exp * 1000),
+    );
+  } catch (_) {
+    return true;
+  }
+}
+
+Future<String?> _authRedirect(BuildContext context, GoRouterState state) async {
+  final location = state.matchedLocation;
+  if (_publicRoutes.contains(location)) return null;
+
+  final token = await _routerStorage.read(key: 'access_token');
+  if (token == null || _isJwtExpired(token)) return '/login';
+  return null;
+}
+
 final appRouter = GoRouter(
   initialLocation: '/splash',
+  refreshListenable: sessionExpiredNotifier,
+  redirect: _authRedirect,
   routes: [
     GoRoute(
       path: '/splash',
@@ -142,7 +178,7 @@ class MainShell extends StatelessWidget {
           return;
         }
         final shouldExit = await _onWillPop(context);
-        if (shouldExit) await SystemNavigator.pop();
+        if (shouldExit && Platform.isAndroid) await SystemNavigator.pop();
       },
       child: Scaffold(
         body: navigationShell,

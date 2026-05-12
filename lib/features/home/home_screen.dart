@@ -76,7 +76,7 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(155),
+        preferredSize: const Size.fromHeight(165),
         child: _HomeAppBar(
           fecha: fecha,
           onProfileTap: () => context.push('/profile'),
@@ -110,7 +110,7 @@ class HomeScreen extends StatelessWidget {
               TextButton(
                 onPressed: () => context.go('/products'),
                 style: TextButton.styleFrom(
-                  foregroundColor: kBrandNavy,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(0, 0),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,

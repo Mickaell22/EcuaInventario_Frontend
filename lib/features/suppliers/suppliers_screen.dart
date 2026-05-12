@@ -79,7 +79,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 96 + MediaQuery.of(context).padding.bottom),
                     itemCount: filtered.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, i) => _SupplierTile(

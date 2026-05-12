@@ -93,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
-                  validator: (v) => (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                  validator: (v) => (v == null || v.length < 8) ? 'Mínimo 8 caracteres' : null,
                 ),
                 const SizedBox(height: 32),
                 FilledButton(

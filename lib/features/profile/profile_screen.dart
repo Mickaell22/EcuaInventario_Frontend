@@ -168,11 +168,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     : const Text('Guardar cambios'),
               ),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/login'),
-                icon: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-                label: const Text('Cerrar sesión', style: TextStyle(color: Color(0xFFEF4444))),
-                style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFEF4444))),
+              Builder(
+                builder: (context) {
+                  final errorColor = Theme.of(context).colorScheme.error;
+                  return OutlinedButton.icon(
+                    onPressed: () => context.go('/login'),
+                    icon: Icon(Icons.logout, color: errorColor),
+                    label: Text('Cerrar sesión', style: TextStyle(color: errorColor)),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: errorColor)),
+                  );
+                },
               ),
             ],
           ),

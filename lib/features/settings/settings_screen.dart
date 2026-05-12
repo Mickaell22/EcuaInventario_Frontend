@@ -52,10 +52,11 @@ class SettingsScreen extends ConsumerWidget {
           _Section(
             title: 'Negocio',
             children: [
-              const ListTile(
-                leading: Icon(Icons.store_outlined),
-                title: Text('Nombre del negocio'),
-                trailing: Icon(Icons.chevron_right),
+              ListTile(
+                leading: const Icon(Icons.store_outlined),
+                title: const Text('Nombre del negocio'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/profile'),
               ),
               ListTile(
                 leading: const Icon(Icons.person_outline),
@@ -68,11 +69,15 @@ class SettingsScreen extends ConsumerWidget {
           _Section(
             title: 'Cuenta',
             children: [
-              ListTile(
-                leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-                title: const Text(
-                    'Cerrar sesión', style: TextStyle(color: Color(0xFFEF4444))),
-                onTap: () => context.go('/login'),
+              Builder(
+                builder: (context) {
+                  final errorColor = Theme.of(context).colorScheme.error;
+                  return ListTile(
+                    leading: Icon(Icons.logout, color: errorColor),
+                    title: Text('Cerrar sesión', style: TextStyle(color: errorColor)),
+                    onTap: () => context.go('/login'),
+                  );
+                },
               ),
             ],
           ),
