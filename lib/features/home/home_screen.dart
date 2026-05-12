@@ -1,27 +1,13 @@
 import 'package:ecua_inventario/app/theme/app_theme.dart';
+import 'package:ecua_inventario/features/auth/auth_provider.dart';
+import 'package:ecua_inventario/features/home/dashboard_models.dart';
+import 'package:ecua_inventario/features/home/dashboard_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-// ── Mock data ────────────────────────────────────────────────────────────────
-
-class _Movement {
-  const _Movement(this.icon, this.color, this.label, this.amount, this.time);
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String amount;
-  final String time;
-}
-
-const _kMovements = [
-  _Movement(Icons.arrow_upward, Color(0xFF10B981), 'Entrada — Aceite de oliva',
-      '+5 L', 'hace 30 min'),
-  _Movement(Icons.arrow_downward, Color(0xFFEF4444), 'Salida — Harina',
-      '-2 kg', 'hace 2 h'),
-  _Movement(Icons.arrow_upward, Color(0xFF10B981), 'Entrada — Leche',
-      '+10 L', 'ayer'),
-];
+// ── Quick actions (static) ────────────────────────────────────────────────────
 
 class _QuickAction {
   const _QuickAction(this.icon, this.color, this.label, this.route);
@@ -40,102 +26,208 @@ const _kQuickActions = [
   _QuickAction(Icons.auto_awesome, kBrandAmber, 'Asistente', '/chat'),
 ];
 
-enum _Status { ok, warn, bad }
+// ── Screen ────────────────────────────────────────────────────────────────────
 
-class _Indicator {
-  const _Indicator(this.label, this.value, this.sub, this.status);
-  final String label;
-  final String value;
-  final String sub;
-  final _Status status;
-
-  Color get dotColor => switch (status) {
-        _Status.ok => const Color(0xFF22C55E),
-        _Status.warn => const Color(0xFFF59E0B),
-        _Status.bad => const Color(0xFFEF4444),
-      };
-}
-
-const _kIndicators = [
-  _Indicator('Utilidad del mes', '\$0.00', 'Sin movimientos', _Status.warn),
-  _Indicator('Stock crítico', '0 items', 'Todo en orden ✓', _Status.ok),
-  _Indicator('Margen promedio', '— %', 'Sin recetas aún', _Status.bad),
-  _Indicator('Platos activos', '0', 'Agrega tu primer plato', _Status.bad),
-];
-
-// ── Screen ───────────────────────────────────────────────────────────────────
-
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final fecha =
-        DateFormat("EEEE, d 'de' MMMM", 'es').format(DateTime.now());
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fecha = DateFormat("EEEE, d 'de' MMMM", 'es').format(DateTime.now());
     final bottomPad = MediaQuery.of(context).padding.bottom;
+    final dashAsync = ref.watch(dashboardProvider);
+    final negocio = ref.watch(negocioProvider);
+    final usuario = ref.watch(usuarioProvider);
 
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(165),
         child: _HomeAppBar(
           fecha: fecha,
+          negocioNombre: negocio?.nombre ?? usuario?.nombre ?? 'Mi negocio',
+          dashAsync: dashAsync,
           onProfileTap: () => context.push('/profile'),
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 96 + bottomPad),
-        children: [
-          const _SectionLabel('Acciones rápidas'),
-          const SizedBox(height: 8),
-          const _QuickActionsGrid(),
-          const SizedBox(height: 20),
-          const _SectionLabel('Indicadores'),
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.45,
+      body: RefreshIndicator(
+        onRefresh: () => ref.refresh(dashboardProvider.future),
+        child: dashAsync.when(
+          loading: () => ListView(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 96 + bottomPad),
             children: [
-              for (final ind in _kIndicators) _IndicatorCard(indicator: ind),
+              const _SectionLabel('Acciones rápidas'),
+              const SizedBox(height: 8),
+              const _QuickActionsGrid(),
+              const SizedBox(height: 20),
+              const _SectionLabel('Indicadores'),
+              const SizedBox(height: 8),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.45,
+                children: const [
+                  _SkeletonCard(),
+                  _SkeletonCard(),
+                  _SkeletonCard(),
+                  _SkeletonCard(),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          error: (e, _) => ListView(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 96 + bottomPad),
             children: [
-              const _SectionLabel('Últimos movimientos'),
-              TextButton(
-                onPressed: () => context.go('/products'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.primary,
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Ver todos',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              const _SectionLabel('Acciones rápidas'),
+              const SizedBox(height: 8),
+              const _QuickActionsGrid(),
+              const SizedBox(height: 24),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cloud_off_outlined,
+                        size: 40,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(height: 8),
+                    Text('No se pudo cargar el dashboard',
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: () => ref.invalidate(dashboardProvider),
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          for (final m in _kMovements) _MovementCard(movement: m),
-        ],
+          data: (dashboard) => _DashboardBody(
+            dashboard: dashboard,
+            bottomPad: bottomPad,
+          ),
+        ),
       ),
     );
   }
 }
 
-// ── Custom AppBar with embedded summary ──────────────────────────────────────
+class _DashboardBody extends StatelessWidget {
+  const _DashboardBody({required this.dashboard, required this.bottomPad});
+
+  final DashboardData dashboard;
+  final double bottomPad;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 96 + bottomPad),
+      children: [
+        const _SectionLabel('Acciones rápidas'),
+        const SizedBox(height: 8),
+        const _QuickActionsGrid(),
+        const SizedBox(height: 20),
+        const _SectionLabel('Indicadores'),
+        const SizedBox(height: 8),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 1.45,
+          children: [
+            _IndicatorCard(
+              label: 'Utilidad del día',
+              value: '\$${dashboard.utilidad.toStringAsFixed(2)}',
+              sub: dashboard.utilidad >= 0 ? 'Positiva ✓' : 'Negativa ⚠',
+              dotColor: dashboard.utilidad >= 0
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFFEF4444),
+            ),
+            _IndicatorCard(
+              label: 'Stock crítico',
+              value: '${dashboard.stockCriticoCount} items',
+              sub: dashboard.stockCriticoCount == 0
+                  ? 'Todo en orden ✓'
+                  : 'Requiere atención',
+              dotColor: dashboard.stockCriticoCount == 0
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFFF59E0B),
+            ),
+            _IndicatorCard(
+              label: 'Ingresos hoy',
+              value: '\$${dashboard.ingresos.toStringAsFixed(2)}',
+              sub: 'Ventas del día',
+              dotColor: dashboard.ingresos > 0
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFFF59E0B),
+            ),
+            _IndicatorCard(
+              label: 'Gastos hoy',
+              value: '\$${dashboard.gastos.toStringAsFixed(2)}',
+              sub: 'Compras registradas',
+              dotColor: const Color(0xFF3B82F6),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const _SectionLabel('Últimos movimientos'),
+            TextButton(
+              onPressed: () => GoRouter.of(context).go('/products'),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Ver todos',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (dashboard.ultimosMovimientos.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'Sin movimientos registrados',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ),
+          )
+        else
+          for (final m in dashboard.ultimosMovimientos)
+            _MovementCard(movement: m),
+      ],
+    );
+  }
+}
+
+// ── Custom AppBar ─────────────────────────────────────────────────────────────
 
 class _HomeAppBar extends StatelessWidget {
-  const _HomeAppBar({required this.fecha, required this.onProfileTap});
+  const _HomeAppBar({
+    required this.fecha,
+    required this.negocioNombre,
+    required this.dashAsync,
+    required this.onProfileTap,
+  });
 
   final String fecha;
+  final String negocioNombre;
+  final AsyncValue<DashboardData> dashAsync;
   final VoidCallback onProfileTap;
 
   @override
@@ -165,14 +257,15 @@ class _HomeAppBar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Cevichería El Pacífico',
-                          style: TextStyle(
+                        Text(
+                          negocioNombre,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.3,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -199,7 +292,7 @@ class _HomeAppBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              const _SummaryBanner(),
+              _SummaryBanner(dashAsync: dashAsync),
             ],
           ),
         ),
@@ -209,16 +302,28 @@ class _HomeAppBar extends StatelessWidget {
 }
 
 class _SummaryBanner extends StatelessWidget {
-  const _SummaryBanner();
+  const _SummaryBanner({required this.dashAsync});
 
-  static const _items = [
-    ('Ingresos', '\$0.00', Color(0xFF4ADE80)),
-    ('Gastos', '\$0.00', Color(0xFFF87171)),
-    ('Utilidad', '\$0.00', Color(0xFFFCD34D)),
-  ];
+  final AsyncValue<DashboardData> dashAsync;
 
   @override
   Widget build(BuildContext context) {
+    final (ingresos, gastos, utilidad) = dashAsync.when(
+      data: (d) => (
+        '\$${d.ingresos.toStringAsFixed(2)}',
+        '\$${d.gastos.toStringAsFixed(2)}',
+        '\$${d.utilidad.toStringAsFixed(2)}',
+      ),
+      loading: () => ('…', '…', '…'),
+      error: (_, _) => ('\$0.00', '\$0.00', '\$0.00'),
+    );
+
+    final items = [
+      ('Ingresos', ingresos, const Color(0xFF4ADE80)),
+      ('Gastos', gastos, const Color(0xFFF87171)),
+      ('Utilidad', utilidad, const Color(0xFFFCD34D)),
+    ];
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
@@ -227,22 +332,22 @@ class _SummaryBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          for (int i = 0; i < _items.length; i++) ...[
+          for (int i = 0; i < items.length; i++) ...[
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _items[i].$2,
+                    items[i].$2,
                     style: TextStyle(
-                      color: _items[i].$3,
+                      color: items[i].$3,
                       fontWeight: FontWeight.w800,
                       fontSize: 17,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _items[i].$1,
+                    items[i].$1,
                     style: const TextStyle(
                       color: Color(0x99FFFFFF),
                       fontSize: 11,
@@ -251,7 +356,7 @@ class _SummaryBanner extends StatelessWidget {
                 ],
               ),
             ),
-            if (i < _items.length - 1)
+            if (i < items.length - 1)
               Container(
                 width: 1,
                 height: 28,
@@ -309,9 +414,8 @@ class _QuickActionCard extends StatelessWidget {
                     offset: const Offset(0, 2),
                   ),
                 ],
-          border: isDark
-              ? Border.all(color: cs.outlineVariant, width: 0.5)
-              : null,
+          border:
+              isDark ? Border.all(color: cs.outlineVariant, width: 0.5) : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -349,12 +453,15 @@ class _QuickActionCard extends StatelessWidget {
 class _MovementCard extends StatelessWidget {
   const _MovementCard({required this.movement});
 
-  final _Movement movement;
+  final UltimoMovimiento movement;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEntrada = movement.tipo == 'entrada';
+    final color =
+        isEntrada ? const Color(0xFF10B981) : const Color(0xFFEF4444);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -371,9 +478,8 @@ class _MovementCard extends StatelessWidget {
                   offset: const Offset(0, 1),
                 ),
               ],
-        border: isDark
-            ? Border.all(color: cs.outlineVariant, width: 0.5)
-            : null,
+        border:
+            isDark ? Border.all(color: cs.outlineVariant, width: 0.5) : null,
       ),
       child: Row(
         children: [
@@ -381,10 +487,14 @@ class _MovementCard extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: movement.color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(movement.icon, size: 18, color: movement.color),
+            child: Icon(
+              isEntrada ? Icons.arrow_upward : Icons.arrow_downward,
+              size: 18,
+              color: color,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -393,7 +503,7 @@ class _MovementCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  movement.label,
+                  '${isEntrada ? 'Entrada' : 'Salida'} — ${movement.productoNombre}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -403,7 +513,7 @@ class _MovementCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  movement.time,
+                  _formatTime(movement.creadoEn),
                   style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
                 ),
               ],
@@ -411,14 +521,71 @@ class _MovementCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            movement.amount,
+            '${isEntrada ? '+' : '-'}${movement.cantidad}',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: movement.color,
+              color: color,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 60) return 'hace ${diff.inMinutes} min';
+    if (diff.inHours < 24) return 'hace ${diff.inHours} h';
+    if (diff.inDays == 1) return 'ayer';
+    return DateFormat('d MMM', 'es').format(dt);
+  }
+}
+
+// ── Skeleton card ─────────────────────────────────────────────────────────────
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              height: 10,
+              width: 80,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            Container(
+              height: 18,
+              width: 60,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            Container(
+              height: 10,
+              width: 100,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -445,9 +612,17 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _IndicatorCard extends StatelessWidget {
-  const _IndicatorCard({required this.indicator});
+  const _IndicatorCard({
+    required this.label,
+    required this.value,
+    required this.sub,
+    required this.dotColor,
+  });
 
-  final _Indicator indicator;
+  final String label;
+  final String value;
+  final String sub;
+  final Color dotColor;
 
   @override
   Widget build(BuildContext context) {
@@ -467,14 +642,14 @@ class _IndicatorCard extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: indicator.dotColor,
+                    color: dotColor,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    indicator.label,
+                    label,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -484,7 +659,7 @@ class _IndicatorCard extends StatelessWidget {
               ],
             ),
             Text(
-              indicator.value,
+              value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: cs.onSurface,
@@ -492,7 +667,7 @@ class _IndicatorCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              indicator.sub,
+              sub,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),

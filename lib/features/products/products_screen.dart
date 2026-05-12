@@ -1,16 +1,27 @@
 import 'package:ecua_inventario/app/theme/app_theme.dart';
-import 'package:ecua_inventario/features/products/product_models.dart';
+import 'package:ecua_inventario/features/products/product_api_models.dart';
+import 'package:ecua_inventario/features/products/product_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class ProductsScreen extends StatefulWidget {
+enum _Filter {
+  todos('Todos'),
+  insumos('Insumos'),
+  platos('Platos');
+
+  const _Filter(this.label);
+  final String label;
+}
+
+class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
   @override
-  State<ProductsScreen> createState() => _ProductsScreenState();
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> {
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   final _searchCtrl = TextEditingController();
   _Filter _filter = _Filter.todos;
   String _query = '';
@@ -21,20 +32,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.dispose();
   }
 
-  List<MockProduct> get _filtered {
-    final list = kMockProducts.where((p) {
-      if (_filter == _Filter.insumos && p.category != ProductCategory.insumo) return false;
-      if (_filter == _Filter.platos && p.category != ProductCategory.plato) return false;
-      if (_query.isNotEmpty && !p.name.toLowerCase().contains(_query.toLowerCase())) return false;
+  List<ProductoDto> _applyFilter(List<ProductoDto> list) {
+    return list.where((p) {
+      if (_filter == _Filter.insumos && p.categoria != ProductCategory.insumo) {
+        return false;
+      }
+      if (_filter == _Filter.platos && p.categoria != ProductCategory.plato) {
+        return false;
+      }
+      if (_query.isNotEmpty &&
+          !p.nombre.toLowerCase().contains(_query.toLowerCase())) {
+        return false;
+      }
       return true;
     }).toList();
-    return list;
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final filtered = _filtered;
+    final productosAsync = ref.watch(productosProvider);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: kBrandNavy,
@@ -42,7 +60,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
         title: const Text('Inventario'),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/products/new'),
+        onPressed: () async {
+          await context.push('/products/new');
+          ref.invalidate(productosProvider);
+        },
         backgroundColor: kBrandAmber,
         foregroundColor: kBrandNavy,
         tooltip: 'Agregar producto',
@@ -89,26 +110,59 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           const SizedBox(height: 4),
           Expanded(
-            child: filtered.isEmpty
-                ? Center(
+            child: productosAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cloud_off_outlined,
+                        size: 40, color: cs.onSurfaceVariant),
+                    const SizedBox(height: 8),
+                    Text('Error al cargar productos',
+                        style: TextStyle(color: cs.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: () => ref.invalidate(productosProvider),
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              ),
+              data: (productos) {
+                final filtered = _applyFilter(productos);
+                if (filtered.isEmpty) {
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.inventory_2_outlined, size: 48, color: cs.onSurfaceVariant),
+                        Icon(Icons.inventory_2_outlined,
+                            size: 48, color: cs.onSurfaceVariant),
                         const SizedBox(height: 8),
-                        Text('Sin resultados', style: TextStyle(color: cs.onSurfaceVariant)),
+                        Text('Sin resultados',
+                            style: TextStyle(color: cs.onSurfaceVariant)),
                       ],
                     ),
-                  )
-                : ListView.separated(
-                    padding: EdgeInsets.fromLTRB(16, 8, 16, 96 + MediaQuery.of(context).padding.bottom),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () => ref.refresh(productosProvider.future),
+                  child: ListView.separated(
+                    padding: EdgeInsets.fromLTRB(
+                        16, 8, 16, 96 + MediaQuery.of(context).padding.bottom),
                     itemCount: filtered.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, i) => _ProductTile(
                       product: filtered[i],
-                      onTap: () => context.push('/products/${filtered[i].id}'),
+                      onTap: () async {
+                        await context.push('/products/${filtered[i].id}');
+                        ref.invalidate(productosProvider);
+                      },
                     ),
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -116,18 +170,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 }
 
-enum _Filter {
-  todos('Todos'),
-  insumos('Insumos'),
-  platos('Platos');
-
-  const _Filter(this.label);
-  final String label;
-}
-
 class _ProductTile extends StatelessWidget {
   const _ProductTile({required this.product, required this.onTap});
-  final MockProduct product;
+  final ProductoDto product;
   final VoidCallback onTap;
 
   @override
@@ -141,20 +186,23 @@ class _ProductTile extends StatelessWidget {
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(
-          backgroundColor: product.category == ProductCategory.insumo
+          backgroundColor: product.categoria == ProductCategory.insumo
               ? cs.primaryContainer
               : kBrandAmber.withValues(alpha: 0.2),
           child: Icon(
-            product.category == ProductCategory.insumo
+            product.categoria == ProductCategory.insumo
                 ? Icons.grain
                 : Icons.restaurant_menu,
-            color: product.category == ProductCategory.insumo ? cs.primary : kBrandAmber,
+            color: product.categoria == ProductCategory.insumo
+                ? cs.primary
+                : kBrandAmber,
             size: 20,
           ),
         ),
-        title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(product.nombre,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          '${product.stock} ${product.unit}  ·  mín ${product.minStock} ${product.unit}',
+          '${product.stockActual} ${product.unidad}  ·  mín ${product.stockMinimo} ${product.unidad}',
           style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
         ),
         trailing: Column(
@@ -164,13 +212,14 @@ class _ProductTile extends StatelessWidget {
             Container(
               width: 10,
               height: 10,
-              decoration: BoxDecoration(color: stockStatus.color, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                  color: stockStatus.color, shape: BoxShape.circle),
             ),
             const SizedBox(height: 4),
             Text(
-              product.category == ProductCategory.plato
-                  ? '\$${product.price.toStringAsFixed(2)}'
-                  : '\$${product.cost.toStringAsFixed(2)}',
+              product.categoria == ProductCategory.plato
+                  ? '\$${product.precioVenta.toStringAsFixed(2)}'
+                  : '\$${product.costo.toStringAsFixed(2)}',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: cs.onSurface,
                     fontWeight: FontWeight.w600,

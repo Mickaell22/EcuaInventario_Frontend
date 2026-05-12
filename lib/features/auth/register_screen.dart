@@ -1,5 +1,7 @@
 import 'package:ecua_inventario/app/theme/app_theme.dart';
+import 'package:ecua_inventario/features/auth/auth_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 const _kBusinessTypes = ['Restaurante', 'Cevichería', 'Comida rápida', 'Panadería', 'Otro'];
@@ -14,14 +16,14 @@ const _kSeedColors = [
   Color(0xFFE65100),
 ];
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _businessCtrl = TextEditingController();
   final _ownerCtrl = TextEditingController();
@@ -33,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   bool _loading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -44,13 +47,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  String _colorToHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _loading = false);
-      context.go('/home');
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+    try {
+      final service = ref.read(authServiceProvider);
+      final result = await service.registro(
+        negocioNombre: _businessCtrl.text.trim(),
+        negocioTipo: _businessType,
+        negocioSeedColor: _colorToHex(_seedColor),
+        nombre: _ownerCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+      );
+      ref.read(usuarioProvider.notifier).state = result.usuario;
+      if (mounted) context.go('/home');
+    } catch (e) {
+      setState(() => _errorMessage = AuthServiceX.dioError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -75,16 +97,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 24),
                 Text(
                   'Datos del negocio',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _businessCtrl,
+                  textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'Nombre del negocio',
                     prefixIcon: Icon(Icons.storefront_outlined),
                   ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingresa el nombre del negocio' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Ingresa el nombre del negocio'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 const _Label('Tipo de negocio'),
@@ -131,55 +159,76 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 28),
                 Text(
                   'Datos del administrador',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _ownerCtrl,
+                  textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'Tu nombre completo',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingresa tu nombre' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Ingresa tu nombre' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'Correo electrónico',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
-                  validator: (v) => (v == null || !v.contains('@')) ? 'Ingresa un correo válido' : null,
+                  validator: (v) =>
+                      (v == null || !v.contains('@')) ? 'Ingresa un correo válido' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passCtrl,
                   obscureText: _obscurePass,
+                  textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
                     labelText: 'Contraseña',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                      icon: Icon(_obscurePass
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined),
                       onPressed: () => setState(() => _obscurePass = !_obscurePass),
                     ),
                   ),
-                  validator: (v) => (v == null || v.length < 8) ? 'Mínimo 8 caracteres' : null,
+                  validator: (v) =>
+                      (v == null || v.length < 8) ? 'Mínimo 8 caracteres' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmCtrl,
                   obscureText: _obscureConfirm,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
                     labelText: 'Confirmar contraseña',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                      onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                      icon: Icon(_obscureConfirm
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined),
+                      onPressed: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
                     ),
                   ),
-                  validator: (v) => v != _passCtrl.text ? 'Las contraseñas no coinciden' : null,
+                  validator: (v) =>
+                      v != _passCtrl.text ? 'Las contraseñas no coinciden' : null,
                 ),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  _ErrorBanner(message: _errorMessage!),
+                ],
                 const SizedBox(height: 32),
                 FilledButton(
                   onPressed: _loading ? null : _submit,
@@ -187,7 +236,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: cs.onPrimary),
                         )
                       : const Text('Crear negocio'),
                 ),
@@ -218,6 +268,35 @@ class _Label extends StatelessWidget {
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w600,
           ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.errorContainer,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 18, color: cs.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
