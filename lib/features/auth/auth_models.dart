@@ -45,8 +45,13 @@ class NegocioDto {
         id: j['id'] as String,
         nombre: j['nombre'] as String,
         tipo: (j['tipo'] as String?) ?? '',
-        seedColor: (j['seed_color'] as String?) ?? '#1976D2',
+        seedColor: _safeHexColor(j['seed_color'] as String?),
       );
+
+  static String _safeHexColor(String? raw) {
+    if (raw == null) return '#1976D2';
+    return RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(raw) ? raw : '#1976D2';
+  }
 }
 
 class AuthTokens {

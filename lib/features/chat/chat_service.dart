@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:ecua_inventario/features/chat/chat_api_models.dart';
+import 'package:facilito/features/chat/chat_api_models.dart';
 
 class ChatService {
   const ChatService(this._dio);

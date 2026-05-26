@@ -1,5 +1,5 @@
-import 'package:ecua_inventario/core/api/api_client_provider.dart';
-import 'package:ecua_inventario/features/home/dashboard_models.dart';
+import 'package:facilito/core/api/api_client_provider.dart';
+import 'package:facilito/features/home/dashboard_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardData>((ref) async {

@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:ecua_inventario/features/suppliers/supplier_api_models.dart';
+import 'package:facilito/features/suppliers/supplier_api_models.dart';
 
 class SupplierRepository {
   const SupplierRepository(this._dio);
@@ -7,8 +7,9 @@ class SupplierRepository {
   final Dio _dio;
 
   Future<List<ProveedorDto>> listar() async {
-    final response = await _dio.get<List<dynamic>>('/api/proveedores/');
-    return (response.data ?? [])
+    final response = await _dio.get<Map<String, dynamic>>('/api/proveedores/');
+    final results = (response.data?['results'] as List<dynamic>?) ?? [];
+    return results
         .map((e) => ProveedorDto.fromJson(e as Map<String, dynamic>))
         .toList();
   }

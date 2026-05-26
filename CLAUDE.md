@@ -4,8 +4,6 @@
 
 Frontend móvil de **EcuaInventario**, plataforma SaaS gastronómica para pequeños negocios de comida en Ecuador. Flutter único para iOS y Android. Backend: Django REST Framework (ver `../Backend/`).
 
-El plan completo de desarrollo está en `frontend_movil_plan.md` y el plan de integración en `integracion_backend_plan.md` — leerlos antes de implementar nuevas pantallas o modificar arquitectura.
-
 ## Entorno
 
 - Flutter en `/opt/flutter/bin/flutter` (no está en el PATH de root). Siempre usar la ruta completa.
@@ -42,31 +40,49 @@ ANDROID_HOME=/home/mickaell/Android/Sdk PATH=$PATH:/home/mickaell/Android/Sdk/pl
 
 ```
 lib/
-├── main.dart                  # Entrada: initializeDateFormatting('es') → ProviderScope → EcuaInventarioApp
+├── main.dart                        # Entrada: initializeDateFormatting('es') → ProviderScope → EcuaInventarioApp
 ├── app/
-│   ├── app.dart               # MaterialApp.router, consume themeProvider
+│   ├── app.dart                     # MaterialApp.router, consume themeProvider
 │   ├── theme/
-│   │   ├── app_theme.dart     # buildTheme(seedColor, brightness) + kBrandNavy/kBrandAmber
-│   │   └── theme_provider.dart # ThemeNotifier (Riverpod) persiste en SharedPreferences
+│   │   ├── app_theme.dart           # buildTheme(seedColor, brightness) + kBrandNavy/kBrandAmber
+│   │   └── theme_provider.dart      # ThemeNotifier (Riverpod) persiste en SharedPreferences
 │   └── router/
-│       └── app_router.dart    # GoRouter + guard de auth + StatefulShellRoute + SplashScreen + MainShell
+│       └── app_router.dart          # GoRouter + guard de auth + StatefulShellRoute + SplashScreen + MainShell
 ├── core/
-│   ├── config/app_config.dart # AppConfig.baseUrl vía --dart-define
-│   └── api/api_client.dart    # Dio + interceptor JWT + auto-refresh 401 + sessionExpiredNotifier
+│   ├── config/app_config.dart       # AppConfig.baseUrl vía --dart-define
+│   └── api/
+│       ├── api_client.dart          # Dio + interceptor JWT + auto-refresh 401 + sessionExpiredNotifier
+│       └── api_client_provider.dart # Provider<ApiClient> singleton (Riverpod)
 ├── features/
 │   ├── auth/
+│   │   ├── auth_models.dart         # UsuarioDto, NegocioDto, AuthTokens
+│   │   ├── auth_service.dart        # login(), registro(), logout(), perfil(), actualizarPerfil(), cambiarPassword()
+│   │   ├── auth_provider.dart       # authServiceProvider, usuarioProvider, negocioProvider, AuthServiceX.dioError()
 │   │   ├── login_screen.dart
 │   │   └── register_screen.dart
 │   ├── onboarding/onboarding_screen.dart
-│   ├── home/home_screen.dart
-│   ├── chat/chat_screen.dart
+│   ├── home/
+│   │   ├── dashboard_models.dart    # DashboardData, UltimoMovimiento
+│   │   ├── dashboard_provider.dart  # FutureProvider.autoDispose → GET /api/dashboard/
+│   │   └── home_screen.dart
+│   ├── chat/
+│   │   ├── chat_api_models.dart     # ChatRespuesta, ConfirmarRequest, ConfirmarRespuesta
+│   │   ├── chat_service.dart        # enviarMensaje(), confirmar()
+│   │   ├── chat_provider.dart       # chatServiceProvider
+│   │   └── chat_screen.dart
 │   ├── products/
-│   │   ├── product_models.dart      # MockProduct (temporal hasta integrar)
+│   │   ├── product_api_models.dart  # ProductoDto, MovimientoDto, ProductCategory, StockStatus
+│   │   ├── product_repository.dart  # listar(), obtener(), crear(), actualizar(), eliminar(), registrarMovimiento()
+│   │   ├── product_providers.dart   # productRepositoryProvider, productosProvider, productoProvider.family
+│   │   ├── product_models.dart      # MockProduct — sin importadores, archivo huérfano (no eliminar aún)
 │   │   ├── products_screen.dart
 │   │   ├── product_detail_screen.dart
 │   │   └── movement_screen.dart
 │   ├── suppliers/
-│   │   ├── supplier_models.dart     # MockSupplier (temporal hasta integrar)
+│   │   ├── supplier_api_models.dart  # ProveedorDto
+│   │   ├── supplier_repository.dart  # listar(), obtener(), crear(), actualizar(), eliminar()
+│   │   ├── supplier_providers.dart   # supplierRepositoryProvider, proveedoresProvider, proveedorProvider.family
+│   │   ├── supplier_models.dart      # MockSupplier — sin importadores, archivo huérfano (no eliminar aún)
 │   │   ├── suppliers_screen.dart
 │   │   └── supplier_detail_screen.dart
 │   ├── profile/profile_screen.dart
@@ -86,6 +102,13 @@ lib/
   4. Flag `extra['_retried']` en el request reintentado para evitar bucles infinitos
 
 **`sessionExpiredNotifier`** es un `ValueNotifier<int>` exportado desde `api_client.dart`. El `GoRouter` lo escucha con `refreshListenable` para re-evaluar el redirect cuando la sesión expira.
+
+### Providers de autenticación (`features/auth/auth_provider.dart`)
+
+- `authServiceProvider` — `Provider<AuthService>` singleton
+- `usuarioProvider` — `StateProvider<UsuarioDto?>` actualizado en login/logout
+- `negocioProvider` — `StateProvider<NegocioDto?>` actualizado en login/logout
+- `AuthServiceX` — extensión con `static String dioError(Object e)` que extrae mensajes DRF desde `DioException.response.data` (prueba las keys: `detail`, `non_field_errors`, `email`, `password`, `error`)
 
 ### Navegación (`app/router/app_router.dart`)
 
@@ -116,6 +139,10 @@ lib/
 
 `HomeScreen` usa `PreferredSize(preferredSize: Size.fromHeight(155))`. Contiene `_HomeAppBar` → `_SummaryBanner` embebida. **No agregar** `AppBar` estándar a `HomeScreen`.
 
+### Manejo de errores de API
+
+Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` inline (no SnackBar, no Dialog). El helper `AuthServiceX.dioError(e)` extrae el mensaje desde `DioException.response.data`.
+
 ## Convenciones
 
 - Archivos en `snake_case`, widgets en `PascalCase`, un widget público por archivo
@@ -124,50 +151,44 @@ lib/
 - Strings de UI en español
 - Análisis estático estricto (`strict-casts`, `strict-inference`, `strict-raw-types`). Debe terminar en `No issues found!`
 - Password mínimo **8 caracteres** (validado en login y register)
+- `DropdownButtonFormField` usa `initialValue:` (no `value:`, que está deprecado)
+- `Color` a hex: `color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()` (no `.value`, deprecado)
+- Entradas de mapa condicionales con key literal: usar `if (x != null) 'key': x` + `// ignore: use_null_aware_elements` (el operador `?'key'` genera otro error)
 
-## Estado actual (2026-05-11)
+## Estado actual (2026-05-11) — integración completa
 
-### Pantallas MVP — todas implementadas con mock data
+### Pantallas MVP — todas conectadas al backend real
 
-| # | Pantalla | Archivo | Notas |
+| # | Pantalla | Archivo | Estado |
 |---|---|---|---|
-| 1 | Splash | `app_router.dart` (`SplashScreen`) | Lee `onboarding_done`, redirige |
+| 1 | Splash | `app_router.dart` | Lee `onboarding_done`, redirige |
 | 2 | Onboarding | `features/onboarding/onboarding_screen.dart` | Guarda `onboarding_done=true` |
-| 3 | Login | `features/auth/login_screen.dart` | Mock → lista para conectar |
-| 4 | Registro | `features/auth/register_screen.dart` | Captura `seed_color` → enviar como `negocio_seed_color` al integrar |
-| 5 | Home / Dashboard | `features/home/home_screen.dart` | AppBar con resumen embebido, mock data |
-| 6 | Chat IA | `features/chat/chat_screen.dart` | Flujo propuesta→confirmación mock |
-| 7 | Productos | `features/products/products_screen.dart` | Búsqueda + filtros, mock |
-| 8 | Detalle producto | `features/products/product_detail_screen.dart` | Cálculo de margen automático |
-| 9 | Movimiento | `features/products/movement_screen.dart` | Entrada/salida mock |
-| 10 | Proveedores | `features/suppliers/suppliers_screen.dart` | Lista + búsqueda, mock |
-| 11 | Detalle proveedor | `features/suppliers/supplier_detail_screen.dart` | Crear/editar mock |
-| 12 | Configuración | `features/settings/settings_screen.dart` | Theming dinámico real |
-| 13 | Perfil | `features/profile/profile_screen.dart` | Datos + cambio de contraseña mock |
+| 3 | Login | `features/auth/login_screen.dart` | Conectado — POST `/api/auth/login/` |
+| 4 | Registro | `features/auth/register_screen.dart` | Conectado — POST `/api/auth/registro/` con `negocio_seed_color` |
+| 5 | Home / Dashboard | `features/home/home_screen.dart` | Conectado — GET `/api/dashboard/` |
+| 6 | Chat IA | `features/chat/chat_screen.dart` | Conectado — POST `/api/chat/mensaje/` + `/api/chat/confirmar/` |
+| 7 | Productos | `features/products/products_screen.dart` | Conectado — GET `/api/inventario/productos/` |
+| 8 | Detalle producto | `features/products/product_detail_screen.dart` | Conectado — CRUD `/api/inventario/productos/` |
+| 9 | Movimiento | `features/products/movement_screen.dart` | Conectado — POST `/api/inventario/productos/{id}/movimiento/` |
+| 10 | Proveedores | `features/suppliers/suppliers_screen.dart` | Conectado — GET `/api/proveedores/` |
+| 11 | Detalle proveedor | `features/suppliers/supplier_detail_screen.dart` | Conectado — CRUD `/api/proveedores/` |
+| 12 | Configuración | `features/settings/settings_screen.dart` | Theming dinámico (SharedPreferences) |
+| 13 | Perfil | `features/profile/profile_screen.dart` | Conectado — GET/PATCH `/api/auth/perfil/` + cambiar contraseña |
 
-### Infraestructura de integración ya lista
+### Flujos de estado confirmados
 
-- `api_client.dart`: interceptor JWT con auto-refresh 401 implementado y probado (sin errores de análisis)
-- `app_router.dart`: guard de autenticación con verificación de expiración real del JWT
-- `sessionExpiredNotifier`: redirect automático a `/login` cuando la sesión expira
+- Login/registro → tokens en `FlutterSecureStorage` → actualiza `usuarioProvider` + `negocioProvider` → navega a `/home`
+- Logout → `authService.logout()` (deleteAll tokens) + limpia providers → navega a `/login`
+- Cambio de contraseña → backend blacklistea todos los tokens → frontend hace logout automático → navega a `/login`
+- Dashboard: `FutureProvider.autoDispose` + `RefreshIndicator` para pull-to-refresh
+- Productos/Proveedores: `FutureProvider.autoDispose` + `ref.invalidate()` al volver de pantallas de edición
+- Chat: `_confirming` bool guard contra doble tap en Confirmar; propuesta muestra `resumen` del backend
 
-### Pendiente (integración Flutter ↔ Django)
+### Pendientes post-MVP
 
-Ver `integracion_backend_plan.md` para el plan detallado. Orden:
-
-1. **Auth** — `auth_models.dart`, `auth_service.dart`, `auth_provider.dart`, conectar login/registro
-2. **Dashboard** — `dashboard_models.dart`, `dashboard_provider.dart`, conectar home
-3. **Productos** — `product_api_models.dart`, `product_repository.dart`, `product_providers.dart`
-4. **Proveedores** — `supplier_repository.dart`, `supplier_providers.dart`
-5. **Chat** — `chat_models.dart`, `chat_service.dart`, `chat_provider.dart` (flujo propuesta real)
-6. **Perfil/Negocio** — cargar datos reales, `negocioProvider`
-
-Al registrar, convertir el `Color` a hex: `'#${_seedColor.value.toRadixString(16).substring(2).toUpperCase()}'` y enviarlo como `negocio_seed_color`.
-
-### Deuda técnica post-integración
-
-- Validar y mostrar errores de campo desde respuestas 400 del backend
-- Loading states explícitos en cada pantalla (skeleton o `CircularProgressIndicator`)
-- Manejo de estado offline (`SocketException`, `DioException` sin conexión)
-- Optimistic updates en listas (productos, proveedores)
-- Protección contra doble tap en "Confirmar" del chat
+- Audio y foto en chat (botones ya presentes en `ChatScreen` sin acción)
+- Eliminar productos y proveedores (botón pendiente en pantallas de detalle)
+- Loading skeleton en pantallas de lista
+- Manejo de estado offline (`SocketException`)
+- Optimistic updates en listas
+- Endpoint PATCH `/api/negocios/` para actualizar nombre del negocio desde perfil

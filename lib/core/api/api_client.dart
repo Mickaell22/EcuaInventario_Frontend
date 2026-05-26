@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:ecua_inventario/core/config/app_config.dart';
+import 'package:facilito/core/config/app_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 

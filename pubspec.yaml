@@ -1,5 +1,5 @@
-name: ecua_inventario
-description: "Plataforma SaaS gastronómica para pequeños negocios de comida en Ecuador."
+name: facilito
+description: "Facilito — gestión sencilla para tu negocio de comida."
 publish_to: 'none'
 
 version: 1.0.0+1

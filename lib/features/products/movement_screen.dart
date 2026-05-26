@@ -1,6 +1,6 @@
-import 'package:ecua_inventario/app/theme/app_theme.dart';
-import 'package:ecua_inventario/features/auth/auth_provider.dart';
-import 'package:ecua_inventario/features/products/product_providers.dart';
+import 'package:facilito/app/theme/app_theme.dart';
+import 'package:facilito/features/auth/auth_provider.dart';
+import 'package:facilito/features/products/product_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

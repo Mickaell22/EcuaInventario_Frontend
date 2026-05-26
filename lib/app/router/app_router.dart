@@ -1,20 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:ecua_inventario/app/theme/app_theme.dart';
-import 'package:ecua_inventario/core/api/api_client.dart';
-import 'package:ecua_inventario/features/auth/login_screen.dart';
-import 'package:ecua_inventario/features/auth/register_screen.dart';
-import 'package:ecua_inventario/features/chat/chat_screen.dart';
-import 'package:ecua_inventario/features/home/home_screen.dart';
-import 'package:ecua_inventario/features/onboarding/onboarding_screen.dart';
-import 'package:ecua_inventario/features/products/movement_screen.dart';
-import 'package:ecua_inventario/features/products/product_detail_screen.dart';
-import 'package:ecua_inventario/features/products/products_screen.dart';
-import 'package:ecua_inventario/features/profile/profile_screen.dart';
-import 'package:ecua_inventario/features/settings/settings_screen.dart';
-import 'package:ecua_inventario/features/suppliers/supplier_detail_screen.dart';
-import 'package:ecua_inventario/features/suppliers/suppliers_screen.dart';
+import 'package:facilito/app/theme/app_theme.dart';
+import 'package:facilito/core/api/api_client.dart';
+import 'package:facilito/features/auth/login_screen.dart';
+import 'package:facilito/features/auth/register_screen.dart';
+import 'package:facilito/features/chat/chat_screen.dart';
+import 'package:facilito/features/home/home_screen.dart';
+import 'package:facilito/features/onboarding/onboarding_screen.dart';
+import 'package:facilito/features/products/movement_screen.dart';
+import 'package:facilito/features/products/product_detail_screen.dart';
+import 'package:facilito/features/products/products_screen.dart';
+import 'package:facilito/features/profile/profile_screen.dart';
+import 'package:facilito/features/settings/settings_screen.dart';
+import 'package:facilito/features/suppliers/supplier_detail_screen.dart';
+import 'package:facilito/features/suppliers/suppliers_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -149,7 +149,7 @@ class MainShell extends StatelessWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('¿Salir de EcuaInventario?'),
+        title: const Text('¿Salir de Facilito?'),
         content: const Text('¿Deseas cerrar la aplicación?'),
         actions: [
           TextButton(
@@ -439,7 +439,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'EcuaInventario',
+              'Facilito',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,

@@ -1,6 +1,6 @@
-# ecua_inventario
+# Facilito
 
-A new Flutter project.
+App móvil de gestión para pequeños negocios de comida en Ecuador.
 
 ## Getting Started
 

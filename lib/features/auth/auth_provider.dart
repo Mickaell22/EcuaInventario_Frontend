@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:ecua_inventario/core/api/api_client_provider.dart';
-import 'package:ecua_inventario/features/auth/auth_models.dart';
-import 'package:ecua_inventario/features/auth/auth_service.dart';
+import 'package:facilito/core/api/api_client_provider.dart';
+import 'package:facilito/features/auth/auth_models.dart';
+import 'package:facilito/features/auth/auth_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) {

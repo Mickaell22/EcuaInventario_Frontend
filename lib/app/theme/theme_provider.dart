@@ -1,4 +1,4 @@
-import 'package:ecua_inventario/app/theme/app_theme.dart';
+import 'package:facilito/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';

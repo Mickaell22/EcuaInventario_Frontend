@@ -1,4 +1,4 @@
-package com.ecuainventario.ecua_inventario
+package com.facilito.app
 
 import io.flutter.embedding.android.FlutterActivity
 

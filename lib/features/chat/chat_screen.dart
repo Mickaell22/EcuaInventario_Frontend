@@ -1,7 +1,7 @@
-import 'package:ecua_inventario/app/theme/app_theme.dart';
-import 'package:ecua_inventario/features/auth/auth_provider.dart';
-import 'package:ecua_inventario/features/chat/chat_api_models.dart';
-import 'package:ecua_inventario/features/chat/chat_provider.dart';
+import 'package:facilito/app/theme/app_theme.dart';
+import 'package:facilito/features/auth/auth_provider.dart';
+import 'package:facilito/features/chat/chat_api_models.dart';
+import 'package:facilito/features/chat/chat_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -33,7 +33,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messages = <_Message>[
     _Message(
-      text: '¡Hola! Soy tu asistente de EcuaInventario ✨\n'
+      text: '¡Hola! Soy tu asistente de Facilito ✨\n'
           'Envíame un mensaje, graba un audio o toma una foto de factura.',
       isUser: false,
     ),

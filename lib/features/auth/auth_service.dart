@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:ecua_inventario/features/auth/auth_models.dart';
+import 'package:facilito/features/auth/auth_models.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
