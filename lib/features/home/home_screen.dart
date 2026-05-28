@@ -374,7 +374,7 @@ class _MovementRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${isEntrada ? 'Entrada' : 'Salida'}  ·  ${_formatTime(movement.creadoEn)}',
+                  '${_motivoLabel(movement)}  ·  ${_formatTime(movement.creadoEn)}',
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ],
@@ -382,7 +382,8 @@ class _MovementRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            '${isEntrada ? '+' : '-'}${movement.cantidad}',
+            '${isEntrada ? '+' : '-'}${movement.cantidad}'
+                '${movement.unidad.isNotEmpty ? ' ${movement.unidad}' : ''}',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -392,6 +393,18 @@ class _MovementRow extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _motivoLabel(UltimoMovimiento m) {
+    const labels = {
+      'compra': 'Compra',
+      'ajuste': 'Ajuste',
+      'consumo': 'Consumo',
+      'merma': 'Merma',
+    };
+    final motivo = labels[m.motivo];
+    if (motivo != null) return motivo;
+    return m.tipo == 'entrada' ? 'Entrada' : 'Salida';
   }
 
   String _formatTime(DateTime dt) {

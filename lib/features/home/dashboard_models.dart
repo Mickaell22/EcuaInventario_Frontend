@@ -4,6 +4,7 @@ class UltimoMovimiento {
     required this.tipo,
     required this.motivo,
     required this.cantidad,
+    required this.unidad,
     required this.productoNombre,
     required this.creadoEn,
   });
@@ -12,6 +13,7 @@ class UltimoMovimiento {
   final String tipo;
   final String motivo;
   final String cantidad;
+  final String unidad;
   final String productoNombre;
   final DateTime creadoEn;
 
@@ -19,10 +21,17 @@ class UltimoMovimiento {
         id: j['id'] as String,
         tipo: j['tipo'] as String,
         motivo: (j['motivo'] as String?) ?? '',
-        cantidad: j['cantidad'].toString(),
+        cantidad: _formatCantidad(j['cantidad']),
+        unidad: (j['producto_unidad'] as String?) ?? '',
         productoNombre: (j['producto_nombre'] as String?) ?? '',
         creadoEn: DateTime.parse(j['creado_en'] as String),
       );
+
+  // "1.000" -> "1", "0.500" -> "0.5", "2.250" -> "2.25"
+  static String _formatCantidad(dynamic raw) {
+    final d = double.tryParse(raw.toString()) ?? 0;
+    return d == d.roundToDouble() ? d.toStringAsFixed(0) : d.toString();
+  }
 }
 
 class StockCritico {
