@@ -11,7 +11,8 @@ class ChatRespuesta {
   final String resumen;
   final Map<String, dynamic> datos;
 
-  bool get esAccionable => accion != 'no_reconocido' && accion.isNotEmpty;
+  bool get esAccionable =>
+      accion.isNotEmpty && accion != 'no_reconocido' && accion != 'responder';
 
   factory ChatRespuesta.fromJson(Map<String, dynamic> j) => ChatRespuesta(
         ok: (j['ok'] as bool?) ?? false,

@@ -10,10 +10,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ── Message model ─────────────────────────────────────────────────────────────
 
 class _Message {
-  _Message({required this.text, required this.isUser, this.respuesta});
+  _Message({
+    required this.text,
+    required this.isUser,
+    this.respuesta,
+    this.sourceText,
+  });
   final String text;
   final bool isUser;
   final ChatRespuesta? respuesta;
+  final String? sourceText; // texto original del usuario, para "Editar"
+  bool confirmada = false; // se marca tras confirmar la propuesta
+  bool descartada = false; // se marca al editar/descartar la propuesta
 }
 
 // Sugerencias genéricas usadas mientras carga el inventario o si el negocio
@@ -44,6 +52,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ),
   ];
   final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   final _scroll = ScrollController();
   bool _busy = false;
   // Guard against double-tapping Confirmar
@@ -52,6 +61,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -87,6 +97,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               : respuesta.resumen,
           isUser: false,
           respuesta: respuesta.esAccionable ? respuesta : null,
+          sourceText: respuesta.esAccionable ? text.trim() : null,
         ));
       });
     } catch (e) {
@@ -103,8 +114,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<void> _confirm(ChatRespuesta respuesta) async {
-    if (_confirming) return;
+  Future<void> _confirm(_Message message) async {
+    final respuesta = message.respuesta;
+    if (respuesta == null || _confirming || message.confirmada) return;
     setState(() => _confirming = true);
     try {
       final service = ref.read(chatServiceProvider);
@@ -112,6 +124,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ConfirmarRequest(accion: respuesta.accion, datos: respuesta.datos),
       );
       if (!mounted) return;
+      setState(() => message.confirmada = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.detalle.isNotEmpty
@@ -131,6 +144,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } finally {
       if (mounted) setState(() => _confirming = false);
     }
+  }
+
+  void _onEdit(_Message message) {
+    final src = message.sourceText ?? '';
+    _controller.text = src;
+    _controller.selection = TextSelection.collapsed(offset: src.length);
+    setState(() => message.descartada = true);
+    _focusNode.requestFocus();
   }
 
   @override
@@ -180,6 +201,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 message: _messages[i],
                 confirming: _confirming,
                 onConfirm: _confirm,
+                onEdit: _onEdit,
               ),
             ),
           ),
@@ -204,7 +226,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
           _SuggestionsBar(onTap: _send),
-          _InputBar(controller: _controller, busy: _busy, onSend: _send),
+          _InputBar(
+            controller: _controller,
+            focusNode: _focusNode,
+            busy: _busy,
+            onSend: _send,
+          ),
         ],
       ),
     );
@@ -280,10 +307,12 @@ class _MessageBubble extends StatelessWidget {
     required this.message,
     required this.confirming,
     required this.onConfirm,
+    required this.onEdit,
   });
   final _Message message;
   final bool confirming;
-  final Future<void> Function(ChatRespuesta) onConfirm;
+  final Future<void> Function(_Message) onConfirm;
+  final void Function(_Message) onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -347,12 +376,13 @@ class _MessageBubble extends StatelessWidget {
               ),
             ],
           ),
-          if (message.respuesta != null) ...[
+          if (message.respuesta != null && !message.descartada) ...[
             const SizedBox(height: 8),
             _ProposalCard(
-              respuesta: message.respuesta!,
+              message: message,
               confirming: confirming,
               onConfirm: onConfirm,
+              onEdit: onEdit,
             ),
           ],
         ],
@@ -365,13 +395,17 @@ class _MessageBubble extends StatelessWidget {
 
 class _ProposalCard extends StatelessWidget {
   const _ProposalCard({
-    required this.respuesta,
+    required this.message,
     required this.confirming,
     required this.onConfirm,
+    required this.onEdit,
   });
-  final ChatRespuesta respuesta;
+  final _Message message;
   final bool confirming;
-  final Future<void> Function(ChatRespuesta) onConfirm;
+  final Future<void> Function(_Message) onConfirm;
+  final void Function(_Message) onEdit;
+
+  ChatRespuesta get respuesta => message.respuesta!;
 
   @override
   Widget build(BuildContext context) {
@@ -431,37 +465,48 @@ class _ProposalCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: confirming ? null : () => onConfirm(respuesta),
-                  style: FilledButton.styleFrom(
-                      backgroundColor: kBrandNavy,
-                      minimumSize: const Size(0, 36)),
-                  child: confirming
-                      ? const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Confirmar',
-                          style: TextStyle(fontSize: 13)),
+          if (message.confirmada)
+            Row(
+              children: [
+                Icon(Icons.check_circle, size: 18, color: cs.primary),
+                const SizedBox(width: 6),
+                Text('Registrado',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.primary, fontWeight: FontWeight.w600)),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: confirming ? null : () => onConfirm(message),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: kBrandNavy,
+                        minimumSize: const Size(0, 36)),
+                    child: confirming
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Confirmar',
+                            style: TextStyle(fontSize: 13)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 36)),
-                  child: const Text('Editar',
-                      style: TextStyle(fontSize: 13)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: confirming ? null : () => onEdit(message),
+                    style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 36)),
+                    child: const Text('Editar',
+                        style: TextStyle(fontSize: 13)),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
@@ -500,10 +545,12 @@ class _ProposalCard extends StatelessWidget {
 class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
+    required this.focusNode,
     required this.busy,
     required this.onSend,
   });
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool busy;
   final void Function(String) onSend;
 
@@ -543,6 +590,7 @@ class _InputBar extends StatelessWidget {
               ),
               child: TextField(
                 controller: controller,
+                focusNode: focusNode,
                 enabled: !busy,
                 decoration: const InputDecoration(
                   hintText: 'Escribe un mensaje...',
