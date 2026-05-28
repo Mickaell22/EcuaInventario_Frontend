@@ -15,10 +15,10 @@ class _Message {
 }
 
 const _kSuggestions = [
-  '¿Cómo va mi negocio?',
-  '¿Qué insumos están bajos?',
-  '¿Receta más rentable?',
-  '¿Cuánto gané este mes?',
+  'Compré 5 kg de camarón',
+  'Vendí 3 ceviches de camarón',
+  'Se dañaron 2 limones',
+  'Nuevo proveedor: Pesquera del Pacífico',
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -34,7 +34,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messages = <_Message>[
     _Message(
       text: '¡Hola! Soy tu asistente de Facilito ✨\n'
-          'Envíame un mensaje, graba un audio o toma una foto de factura.',
+          'Cuéntame qué compraste, vendiste o si algo se dañó y lo registro por ti. '
+          'Por ejemplo: «Compré 5 kg de camarón».',
       isUser: false,
     ),
   ];
