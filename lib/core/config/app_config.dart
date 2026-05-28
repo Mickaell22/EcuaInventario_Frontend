@@ -3,7 +3,7 @@
 class AppConfig {
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000', // emulador → localhost de la PC
+    defaultValue: 'https://web-production-8e7ef.up.railway.app',
   );
 
   static const bool isProduction = bool.fromEnvironment('IS_PRODUCTION');

@@ -1,8 +1,8 @@
-# CLAUDE.md — EcuaInventario Frontend (Flutter)
+# CLAUDE.md — Facilito Frontend (Flutter)
 
 ## Contexto del proyecto
 
-Frontend móvil de **EcuaInventario**, plataforma SaaS gastronómica para pequeños negocios de comida en Ecuador. Flutter único para iOS y Android. Backend: Django REST Framework (ver `../Backend/`).
+Frontend móvil de **Facilito**, plataforma SaaS gastronómica para pequeños negocios de comida en Ecuador. Flutter único para iOS y Android. Backend: Django REST Framework (ver `../Backend/`).
 
 ## Entorno
 
@@ -24,6 +24,10 @@ ANDROID_HOME=/home/mickaell/Android/Sdk /opt/flutter/bin/flutter pub get
 ANDROID_HOME=/home/mickaell/Android/Sdk PATH=$PATH:/home/mickaell/Android/Sdk/platform-tools \
   /opt/flutter/bin/flutter run -d 103953736M000152
 
+# Correr apuntando a Railway (por defecto, sin --dart-define)
+ANDROID_HOME=/home/mickaell/Android/Sdk PATH=$PATH:/home/mickaell/Android/Sdk/platform-tools \
+  /opt/flutter/bin/flutter run -d 103953736M000152
+
 # Correr apuntando al backend local (misma red WiFi)
 ANDROID_HOME=/home/mickaell/Android/Sdk PATH=$PATH:/home/mickaell/Android/Sdk/platform-tools \
   /opt/flutter/bin/flutter run -d 103953736M000152 \
@@ -40,7 +44,7 @@ ANDROID_HOME=/home/mickaell/Android/Sdk PATH=$PATH:/home/mickaell/Android/Sdk/pl
 
 ```
 lib/
-├── main.dart                        # Entrada: initializeDateFormatting('es') → ProviderScope → EcuaInventarioApp
+├── main.dart                        # Entrada: initializeDateFormatting('es') → ProviderScope → FacilitoApp
 ├── app/
 │   ├── app.dart                     # MaterialApp.router, consume themeProvider
 │   ├── theme/
@@ -130,14 +134,14 @@ lib/
 **Regla:** nunca hardcodear `Colors.white`, `Colors.grey.shade*` ni colores arbitrarios en widgets. Usar `Theme.of(context).colorScheme.*`. Excepciones intencionales:
 - Fondos de `AppBar` → `kBrandNavy`
 - Burbujas de usuario en chat → `kBrandNavy`
-- Texto/íconos dentro de `_HomeAppBar` y `_SummaryBanner` → `Colors.white` con opacidad (sobre fondo navy)
+- Texto/íconos del `AppBar` de Home (sobre fondo navy) → `Colors.white` con opacidad
 - Ícono del botón chat activo → `Colors.white` (sobre fondo navy)
 
 `ThemeNotifier` persiste en `SharedPreferences` (no `FlutterSecureStorage` — el tema no es dato sensible).
 
-### Patrón del AppBar de Home
+### AppBar de Home
 
-`HomeScreen` usa `PreferredSize(preferredSize: Size.fromHeight(155))`. Contiene `_HomeAppBar` → `_SummaryBanner` embebida. **No agregar** `AppBar` estándar a `HomeScreen`.
+`HomeScreen` usa `AppBar` estándar de Material 3 con `backgroundColor: kBrandNavy`. Muestra fecha y nombre del negocio en el título, y el botón de perfil en `actions`. **No usar** `PreferredSize` ni `_SummaryBanner` — ese patrón fue eliminado en el rediseño.
 
 ### Manejo de errores de API
 
@@ -146,7 +150,7 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 ## Convenciones
 
 - Archivos en `snake_case`, widgets en `PascalCase`, un widget público por archivo
-- Imports con ruta de paquete completa (`package:ecua_inventario/...`), nunca relativos
+- Imports con ruta de paquete completa (`package:facilito/...`), nunca relativos
 - No usar `StatefulWidget` si Riverpod resuelve el estado
 - Strings de UI en español
 - Análisis estático estricto (`strict-casts`, `strict-inference`, `strict-raw-types`). Debe terminar en `No issues found!`
@@ -155,7 +159,7 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 - `Color` a hex: `color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()` (no `.value`, deprecado)
 - Entradas de mapa condicionales con key literal: usar `if (x != null) 'key': x` + `// ignore: use_null_aware_elements` (el operador `?'key'` genera otro error)
 
-## Estado actual (2026-05-11) — integración completa
+## Estado actual (2026-05-26) — integración completa
 
 ### Pantallas MVP — todas conectadas al backend real
 
@@ -183,6 +187,17 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 - Dashboard: `FutureProvider.autoDispose` + `RefreshIndicator` para pull-to-refresh
 - Productos/Proveedores: `FutureProvider.autoDispose` + `ref.invalidate()` al volver de pantallas de edición
 - Chat: `_confirming` bool guard contra doble tap en Confirmar; propuesta muestra `resumen` del backend
+
+### Cambios (2026-05-28)
+
+- `AppConfig.baseUrl` apunta a Railway por defecto (`https://web-production-8e7ef.up.railway.app`). Para desarrollo local usar `--dart-define=BASE_URL=http://<IP>:8000`.
+
+### Cambios (2026-05-26)
+
+- App renombrada a **Facilito**: package `facilito`, applicationId `com.facilito.app`, labels Android/iOS, texto UI
+- Home rediseñado: `AppBar` simple + sección "Resumen de hoy" como lista plana (sin grilla de tarjetas)
+- `product_repository.dart` y `supplier_repository.dart`: `listar()` maneja respuesta paginada `{count, results:[...]}`
+- `NegocioDto._safeHexColor()`: valida formato `#RRGGBB` con regex antes de almacenar el seed_color del backend
 
 ### Pendientes post-MVP
 
