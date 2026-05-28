@@ -191,6 +191,7 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 ### Cambios (2026-05-28)
 
 - `AppConfig.baseUrl` apunta a Railway por defecto (`https://web-production-8e7ef.up.railway.app`). Para desarrollo local usar `--dart-define=BASE_URL=http://<IP>:8000`.
+- **Últimos movimientos del Home:** `UltimoMovimiento` (`dashboard_models.dart`) agrega el campo `unidad` (de `producto_unidad`, fallback `''`) y formatea `cantidad` con `_formatCantidad()` para quitar ceros sobrantes (`1.000`→`1`, `0.500`→`0.5`). En `home_screen.dart`, `_MovementRow` muestra `±cantidad unidad` (ej. `+1 kg`) y `_motivoLabel()` muestra Compra/Consumo/Merma/Ajuste en el subtítulo (con fallback Entrada/Salida). La unidad solo aparece si el backend incluye `producto_unidad` en `MovimientoSerializer`.
 
 ### Cambios (2026-05-26)
 
