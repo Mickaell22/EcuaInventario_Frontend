@@ -22,6 +22,7 @@ class _Message {
   final String? sourceText; // texto original del usuario, para "Editar"
   bool confirmada = false; // se marca tras confirmar la propuesta
   bool descartada = false; // se marca al editar/descartar la propuesta
+  bool caducada = false; // se marca cuando llega un mensaje nuevo sin confirmar
 }
 
 // Sugerencias genéricas usadas mientras carga el inventario o si el negocio
@@ -82,6 +83,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (text.trim().isEmpty || _busy) return;
     _controller.clear();
     setState(() {
+      for (final m in _messages) {
+        if (m.respuesta != null && !m.confirmada && !m.descartada) {
+          m.caducada = true;
+        }
+      }
       _messages.add(_Message(text: text.trim(), isUser: true));
       _busy = true;
     });
@@ -414,8 +420,7 @@ class _ProposalCard extends StatelessWidget {
     final displayFields = Map<String, String>.fromEntries(
       respuesta.datos.entries
           .where((e) => e.value != null && e.value.toString().isNotEmpty)
-          .map((e) => MapEntry(
-              _labelFor(e.key), e.value.toString())),
+          .map((e) => MapEntry(_labelFor(e.key), _formatValue(e.key, e.value))),
     );
 
     return Container(
@@ -475,6 +480,17 @@ class _ProposalCard extends StatelessWidget {
                         color: cs.primary, fontWeight: FontWeight.w600)),
               ],
             )
+          else if (message.caducada)
+            Row(
+              children: [
+                Icon(Icons.history_toggle_off,
+                    size: 18, color: cs.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text('Caducada',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant)),
+              ],
+            )
           else
             Row(
               children: [
@@ -510,6 +526,20 @@ class _ProposalCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatValue(String key, Object? value) {
+    if (key == 'detalles' && value is List) {
+      return value.map((item) {
+        if (item is Map) {
+          final prod = item['producto'] ?? '';
+          final cant = item['cantidad'] ?? '';
+          return '$cant × $prod';
+        }
+        return item.toString();
+      }).join(', ');
+    }
+    return value.toString();
   }
 
   String _titleFor(String accion) => switch (accion) {
@@ -598,8 +628,8 @@ class _InputBar extends StatelessWidget {
                   contentPadding:
                       EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
-                textInputAction: TextInputAction.send,
-                onSubmitted: onSend,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
                 maxLines: null,
               ),
             ),
