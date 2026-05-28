@@ -2,6 +2,8 @@ import 'package:facilito/app/theme/app_theme.dart';
 import 'package:facilito/features/auth/auth_provider.dart';
 import 'package:facilito/features/chat/chat_api_models.dart';
 import 'package:facilito/features/chat/chat_provider.dart';
+import 'package:facilito/features/products/product_api_models.dart';
+import 'package:facilito/features/products/product_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,11 +16,13 @@ class _Message {
   final ChatRespuesta? respuesta;
 }
 
-const _kSuggestions = [
-  'Compré 5 kg de camarón',
-  'Vendí 3 ceviches de camarón',
-  'Se dañaron 2 limones',
-  'Nuevo proveedor: Pesquera del Pacífico',
+// Sugerencias genéricas usadas mientras carga el inventario o si el negocio
+// aún no tiene productos registrados.
+const _kFallbackSuggestions = [
+  'Registrar una compra',
+  'Registrar una venta',
+  'Reportar una merma',
+  'Agregar un proveedor',
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -209,22 +213,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 // ── Suggestions bar ───────────────────────────────────────────────────────────
 
-class _SuggestionsBar extends StatelessWidget {
+class _SuggestionsBar extends ConsumerWidget {
   const _SuggestionsBar({required this.onTap});
   final void Function(String) onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
+    final productos = ref.watch(productosProvider);
+    final sugerencias = productos.hasValue
+        ? _buildSuggestions(productos.value!)
+        : _kFallbackSuggestions;
     return SizedBox(
       height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _kSuggestions.length,
+        itemCount: sugerencias.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) => GestureDetector(
-          onTap: () => onTap(_kSuggestions[i]),
+          onTap: () => onTap(sugerencias[i]),
           child: Container(
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -233,7 +241,7 @@ class _SuggestionsBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: cs.outlineVariant),
             ),
-            child: Text(_kSuggestions[i],
+            child: Text(sugerencias[i],
                 style: Theme.of(context)
                     .textTheme
                     .labelSmall
@@ -243,6 +251,26 @@ class _SuggestionsBar extends StatelessWidget {
       ),
     );
   }
+}
+
+// Arma ejemplos con los productos reales del negocio para que el chat sirva a
+// cualquier rubro. Si no hay productos suficientes, cae en las genéricas.
+List<String> _buildSuggestions(List<ProductoDto> productos) {
+  final insumos = productos.where((p) => p.categoria == ProductCategory.insumo);
+  final platos = productos.where((p) => p.categoria == ProductCategory.plato);
+  final insumo = insumos.isEmpty ? null : insumos.first;
+  final plato = platos.isEmpty ? null : platos.first;
+
+  final sugerencias = <String>[];
+  if (insumo != null) {
+    sugerencias.add('Compré 5 ${insumo.unidad} de ${insumo.nombre}');
+    sugerencias.add('Se dañó 1 ${insumo.unidad} de ${insumo.nombre}');
+  }
+  if (plato != null) {
+    sugerencias.add('Vendí 2 ${plato.nombre}');
+  }
+  sugerencias.add('Agregar un proveedor');
+  return sugerencias.length > 1 ? sugerencias : _kFallbackSuggestions;
 }
 
 // ── Message bubble ────────────────────────────────────────────────────────────
