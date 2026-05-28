@@ -112,7 +112,7 @@ lib/
 - `authServiceProvider` — `Provider<AuthService>` singleton
 - `usuarioProvider` — `StateProvider<UsuarioDto?>` actualizado en login/logout
 - `negocioProvider` — `StateProvider<NegocioDto?>` actualizado en login/logout
-- `AuthServiceX` — extensión con `static String dioError(Object e)` que extrae mensajes DRF desde `DioException.response.data` (prueba las keys: `detail`, `non_field_errors`, `email`, `password`, `error`)
+- `AuthServiceX` — extensión con `static String dioError(Object e)` que primero extrae mensajes DRF desde `DioException.response.data` (keys `detail`, `non_field_errors`, `email`, `password`, `error`) y, si no hay cuerpo legible, clasifica por código HTTP (5xx, 401/403) o tipo de `DioException` (sin conexión, timeout, certificado) con un mensaje claro
 
 ### Navegación (`app/router/app_router.dart`)
 
@@ -145,7 +145,7 @@ lib/
 
 ### Manejo de errores de API
 
-Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` inline (no SnackBar, no Dialog). El helper `AuthServiceX.dioError(e)` extrae el mensaje desde `DioException.response.data`.
+Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` inline (no SnackBar, no Dialog). El helper `AuthServiceX.dioError(e)` extrae el mensaje DRF desde `DioException.response.data` y, en su defecto, devuelve un mensaje descriptivo según el código HTTP (5xx, 401/403) o el tipo de error de conexión (sin conexión, timeout, certificado).
 
 ## Convenciones
 
@@ -192,6 +192,13 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 
 - `AppConfig.baseUrl` apunta a Railway por defecto (`https://web-production-8e7ef.up.railway.app`). Para desarrollo local usar `--dart-define=BASE_URL=http://<IP>:8000`.
 - **Últimos movimientos del Home:** `UltimoMovimiento` (`dashboard_models.dart`) agrega el campo `unidad` (de `producto_unidad`, fallback `''`) y formatea `cantidad` con `_formatCantidad()` para quitar ceros sobrantes (`1.000`→`1`, `0.500`→`0.5`). En `home_screen.dart`, `_MovementRow` muestra `±cantidad unidad` (ej. `+1 kg`) y `_motivoLabel()` muestra Compra/Consumo/Merma/Ajuste en el subtítulo (con fallback Entrada/Salida). La unidad solo aparece si el backend incluye `producto_unidad` en `MovimientoSerializer`.
+- **Login en release corregido:** se agregó `<uses-permission android:name="android.permission.INTERNET"/>` en `android/app/src/main/AndroidManifest.xml`. Flutter solo inyecta INTERNET en builds debug, por eso `flutter run` funcionaba pero la APK release fallaba toda petición de red.
+- **`AuthServiceX.dioError` reescrito:** clasifica el error por tipo y da un mensaje claro — validación/credenciales (DRF), error 5xx del servidor, sin conexión (`connectionError`), timeout, certificado — en vez del genérico "Ocurrió un error inesperado".
+- **Chat — sugerencias dinámicas:** `_SuggestionsBar` es `ConsumerWidget` y arma los chips desde el inventario real (`productosProvider`): ej. "Compré 5 {unidad} de {insumo}", "Vendí 2 {plato}". Si el negocio no tiene productos usa `_kFallbackSuggestions` (genéricas).
+- **Chat — acción `responder`:** `ChatRespuesta.esAccionable` excluye `responder` y `no_reconocido`, así las respuestas a preguntas se muestran como texto, sin tarjeta de confirmación.
+- **Chat — confirmar/editar/caducar:** `_Message` tiene `confirmada`/`descartada`/`caducada`/`sourceText`. Tras confirmar, la propuesta queda "Registrado" (sin re-confirmar → evita duplicados); "Editar" devuelve el texto original al input y descarta la tarjeta; al enviar otro mensaje las propuestas pendientes pasan a "Caducada".
+- **Chat — detalles de venta legibles:** `_formatValue()` muestra el campo `detalles` como `cantidad × producto` en vez del JSON crudo.
+- **Chat — teclado:** el `TextField` usa `TextInputType.multiline` + `TextInputAction.newline` (Enter = salto de línea); el envío es solo con el botón ámbar.
 
 ### Cambios (2026-05-26)
 
@@ -202,7 +209,8 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 
 ### Pendientes post-MVP
 
-- Audio y foto en chat (botones ya presentes en `ChatScreen` sin acción)
+- **Arreglar colores / modo oscuro** (hay errores reportados — pendiente para otra sesión)
+- Audio y foto en chat (botones ya presentes en `ChatScreen` sin acción; backend requiere `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`)
 - Eliminar productos y proveedores (botón pendiente en pantallas de detalle)
 - Loading skeleton en pantallas de lista
 - Manejo de estado offline (`SocketException`)

@@ -110,7 +110,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (!mounted) return;
       setState(() {
         _messages.add(_Message(
-          text: 'No pude procesar tu mensaje. Verifica tu conexión e intenta nuevamente.',
+          text: AuthServiceX.dioError(e),
           isUser: false,
         ));
       });
@@ -584,6 +584,14 @@ class _InputBar extends StatelessWidget {
   final bool busy;
   final void Function(String) onSend;
 
+  void _avisoProximamente(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Enviar audio y fotos estará disponible pronto.'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -602,13 +610,15 @@ class _InputBar extends StatelessWidget {
         children: [
           IconButton(
             icon: const Icon(Icons.mic_outlined),
-            onPressed: () {},
+            tooltip: 'Enviar audio (próximamente)',
+            onPressed: () => _avisoProximamente(context),
             color: cs.onSurfaceVariant,
             iconSize: 22,
           ),
           IconButton(
             icon: const Icon(Icons.photo_camera_outlined),
-            onPressed: () {},
+            tooltip: 'Enviar foto (próximamente)',
+            onPressed: () => _avisoProximamente(context),
             color: cs.onSurfaceVariant,
             iconSize: 22,
           ),
