@@ -101,8 +101,8 @@ lib/
 - Timeouts: `connectTimeout=15s`, `receiveTimeout=30s`, `sendTimeout=30s`
 - Interceptor `_AuthInterceptor` que:
   1. Añade `Authorization: Bearer <access_token>` en cada request
-  2. En 401: intenta refresh con `refresh_token` → reintenta el request original con `_dio.fetch()` (misma instancia, no `Dio()` nueva)
-  3. Si el refresh falla: borra todos los tokens (`deleteAll()`) e incrementa `sessionExpiredNotifier`
+  2. En 401: intenta refresh con `refresh_token` → reintenta el request original con `_dio.fetch()` (misma instancia, no `Dio()` nueva). El refresh usa un `Dio` aparte (sin interceptor, para no reciclar en bucle) pero **con los mismos timeouts** que el cliente principal.
+  3. Si el backend **rechaza** el refresh (respuesta 4xx): borra todos los tokens (`deleteAll()`) e incrementa `sessionExpiredNotifier`. Un error de red, timeout o 5xx **no cierra la sesión** (es transitorio); la petición original falla con su error normal y el usuario puede reintentar.
   4. Flag `extra['_retried']` en el request reintentado para evitar bucles infinitos
 
 **`sessionExpiredNotifier`** es un `ValueNotifier<int>` exportado desde `api_client.dart`. El `GoRouter` lo escucha con `refreshListenable` para re-evaluar el redirect cuando la sesión expira.
@@ -199,6 +199,8 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 - **Chat — confirmar/editar/caducar:** `_Message` tiene `confirmada`/`descartada`/`caducada`/`sourceText`. Tras confirmar, la propuesta queda "Registrado" (sin re-confirmar → evita duplicados); "Editar" devuelve el texto original al input y descarta la tarjeta; al enviar otro mensaje las propuestas pendientes pasan a "Caducada".
 - **Chat — detalles de venta legibles:** `_formatValue()` muestra el campo `detalles` como `cantidad × producto` en vez del JSON crudo.
 - **Chat — teclado:** el `TextField` usa `TextInputType.multiline` + `TextInputAction.newline` (Enter = salto de línea); el envío es solo con el botón ámbar.
+- **Chat — errores reales:** al fallar el envío, `_send` muestra `AuthServiceX.dioError(e)` (mensaje real según el tipo de error) en vez de un texto fijo de conexión, igual que ya hacía `_confirm`.
+- **Chat — audio/foto:** los botones de micrófono y cámara ya no quedan inertes; al tocarlos muestran un aviso "disponible pronto" (la función sigue sin implementarse).
 
 ### Cambios (2026-05-26)
 
@@ -210,7 +212,7 @@ Todos los formularios que llaman a la API muestran el error con `_ErrorBanner` i
 ### Pendientes post-MVP
 
 - **Arreglar colores / modo oscuro** (hay errores reportados — pendiente para otra sesión)
-- Audio y foto en chat (botones ya presentes en `ChatScreen` sin acción; backend requiere `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`)
+- Audio y foto en chat (los botones avisan "disponible pronto"; falta implementar la captura/envío y configurar `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` en el backend)
 - Eliminar productos y proveedores (botón pendiente en pantallas de detalle)
 - Loading skeleton en pantallas de lista
 - Manejo de estado offline (`SocketException`)

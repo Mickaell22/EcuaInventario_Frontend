@@ -58,7 +58,16 @@ class _AuthInterceptor extends Interceptor {
       if (refreshToken != null) {
         _isRefreshing = true;
         try {
-          final response = await Dio().post<Map<String, dynamic>>(
+          // Dio aparte (sin _AuthInterceptor) para no reintentar en bucle,
+          // pero con los mismos timeouts que el cliente principal.
+          final refreshDio = Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 30),
+              sendTimeout: const Duration(seconds: 30),
+            ),
+          );
+          final response = await refreshDio.post<Map<String, dynamic>>(
             '${AppConfig.baseUrl}/api/auth/token/refresh/',
             data: {'refresh': refreshToken},
           );
@@ -76,9 +85,17 @@ class _AuthInterceptor extends Interceptor {
           err.requestOptions.extra['_retried'] = true;
           final retryResponse = await _dio.fetch<dynamic>(err.requestOptions);
           return handler.resolve(retryResponse);
+        } on DioException catch (e) {
+          // Solo cerrar sesión si el backend rechazó el refresh (4xx).
+          // Un error de red o 5xx es transitorio: se conserva la sesión
+          // y la petición original falla con su error normal.
+          final code = e.response?.statusCode;
+          if (code != null && code >= 400 && code < 500) {
+            await _storage.deleteAll();
+            sessionExpiredNotifier.value++;
+          }
         } catch (_) {
-          await _storage.deleteAll();
-          sessionExpiredNotifier.value++;
+          // Respuesta malformada del refresh: no cerrar sesión por eso.
         } finally {
           _isRefreshing = false;
         }
