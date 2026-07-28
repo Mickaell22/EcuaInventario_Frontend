@@ -51,3 +51,6 @@ app.*.map.json
 .env
 .env.*
 !.env.example
+
+# Configuracion local y variables de entorno reales
+.claude/
